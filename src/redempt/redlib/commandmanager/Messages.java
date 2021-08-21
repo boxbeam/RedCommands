@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,13 +30,11 @@ public class Messages {
 	
 	/**
 	 * Loads messages from a file and writes missing defaults
-	 * @param plugin The plugin loading the messages
 	 * @param defaults The InputStream for default messages. Use {@link Plugin#getResource(String)} for this.
-	 * @param filename The name of the file in the plugin folder to load messages from
+	 * @param path The path of the file in the plugin folder to load messages from
 	 * @return The Messages instance with messages loaded.
 	 */
-	public static Messages load(Plugin plugin, InputStream defaults, String filename) {
-		java.nio.file.Path path = plugin.getDataFolder().toPath().resolve(filename);
+	public static Messages load(InputStream defaults, Path path) {
 		try {
 			Map<String, String> messages = Files.exists(path) ? parse(Files.readAllLines(path)) : new LinkedHashMap<>();
 			BufferedReader reader = new BufferedReader(new InputStreamReader(defaults));
@@ -55,11 +54,26 @@ public class Messages {
 			if (missing[0]) {
 				write(messages, path);
 			}
-			return new Messages(plugin, messages, defaultMap);
+			return new Messages(null, messages, defaultMap);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
+	/**
+	 * Loads messages from a file and writes missing defaults
+	 * @param plugin The plugin loading the messages
+	 * @param defaults The InputStream for default messages. Use {@link Plugin#getResource(String)} for this.
+	 * @param filename The name of the file in the plugin folder to load messages from
+	 * @return The Messages instance with messages loaded.
+	 */
+	public static Messages load(Plugin plugin, InputStream defaults, String filename) {
+		Path path = plugin.getDataFolder().toPath().resolve(filename);
+		Messages messages = load(defaults, path);
+		messages.plugin = plugin;
+		all.put(plugin, messages);
+		return messages;
 	}
 	
 	/**
@@ -121,7 +135,7 @@ public class Messages {
 		List<String> lines = map.entrySet().stream().map(e -> e.getKey() + ": " + e.getValue()).collect(Collectors.toList());
 		try {
 			if (!Files.exists(file.getParent())) {
-				Files.createDirectory(file.getParent());
+				Files.createDirectories(file.getParent());
 			}
 			Files.write(file, lines, Charset.defaultCharset(), StandardOpenOption.CREATE);
 		} catch (IOException e) {
@@ -137,7 +151,6 @@ public class Messages {
 		this.messages = messages;
 		this.defaults = defaults;
 		this.plugin = plugin;
-		all.put(plugin, this);
 	}
 	
 	/**

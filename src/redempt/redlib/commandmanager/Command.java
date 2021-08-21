@@ -17,8 +17,6 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static redempt.redlib.commandmanager.Messages.msg;
-
 /**
  * Represents a command which can be registered
  *
@@ -79,7 +77,7 @@ public class Command {
 		this.permission = permission;
 		this.type = type;
 		this.hook = hook;
-		this.help = help == null ? null : help.replace("\n", "\n" + Messages.msg("helpTextColor"));
+		this.help = help == null ? null : help.replace("\n", "\n" + CommandProcessUtils.msg("helpTextColor"));
 		this.hideSub = hideSub;
 		this.noTab = noTab;
 		this.noHelp = noHelp;
@@ -111,7 +109,7 @@ public class Command {
 	 * @return True if the help was shown to the user, false if the usage was shown instead
 	 */
 	public boolean showHelp(CommandSender sender) {
-		String title = msg("helpTitle").replace("%cmdname%", names[0]);
+		String title = CommandProcessUtils.msg("helpTitle").replace("%cmdname%", names[0]);
 		List<String> lines = new ArrayList<>();
 		Collections.addAll(lines, getHelpRecursive(sender, 0).trim().split("\n"));
 		if (parent != null) {
@@ -124,7 +122,7 @@ public class Command {
 			sender.sendMessage(title);
 			lines.forEach(sender::sendMessage);
 		} else {
-			sender.sendMessage(Messages.msg("showUsage").replace("%usage%", getFullName()));
+			sender.sendMessage(CommandProcessUtils.msg("showUsage").replace("%usage%", getFullName()));
 		}
 		return lines.size() > 0;
 	}
@@ -134,10 +132,10 @@ public class Command {
 			return "";
 		}
 		StringBuilder help = new StringBuilder();
-		help.append(this.help == null ? "" : msg("helpEntry").replace("%cmdname%", getFullName()).replace("%help%", this.help) + "\n");
+		help.append(this.help == null ? "" : CommandProcessUtils.msg("helpEntry").replace("%cmdname%", getFullName()).replace("%help%", this.help) + "\n");
 		if (hideSub && level != 0) {
 			if (help.length() == 0) {
-				return msg("helpEntry").replace("%cmdname%", getFullName()).replace("%help%", "[Hidden subcommands]") + "\n";
+				return CommandProcessUtils.msg("helpEntry").replace("%cmdname%", getFullName()).replace("%help%", "[Hidden subcommands]") + "\n";
 			}
 			return help.toString();
 		}
@@ -203,11 +201,11 @@ public class Command {
 	
 	private String getWrongArgumentCountMessage(Command command, int args, int optionals) {
 		if (optionals == 0) {
-			return Messages.msg("wrongArgumentCount")
+			return CommandProcessUtils.msg("wrongArgumentCount")
 					.replace("%args%", this.args.length + "")
 					.replace("%count%", args + "");
 		} else {
-			return Messages.msg("wrongArgumentCount")
+			return CommandProcessUtils.msg("wrongArgumentCount")
 					.replace("%args%", (this.args.length - optionals) + "-" + this.args.length)
 					.replace("%count%", args + "");
 		}
@@ -249,7 +247,7 @@ public class Command {
 			Result<Object, String> convertResult = CommandProcessUtils.convertArg(this, carg, arg, output, offset, sender);
 			if (convertResult.getValue() == null || diff >= optionals) {
 				if (carg.isContextDefault() && !(sender instanceof Player)) {
-					return Messages.msg("contextDefaultFromConsole").replace("%arg%", carg.getName());
+					return CommandProcessUtils.msg("contextDefaultFromConsole").replace("%arg%", carg.getName());
 				}
 				diff--;
 				optionals--;
@@ -264,13 +262,13 @@ public class Command {
 		for (int i = argPos; i < commandArgs.size(); i++) {
 			CommandArgument carg = commandArgs.get(i);
 			if (carg.isContextDefault() && !(sender instanceof Player)) {
-				return Messages.msg("contextDefaultFromConsole").replace("%arg%", carg.getName());
+				return CommandProcessUtils.msg("contextDefaultFromConsole").replace("%arg%", carg.getName());
 			}
 			output[carg.getPosition() + offset] = carg.getDefaultValue(sender);
 			diff--;
 		}
 		if (diff != 0) {
-			return Messages.msg("ambiguousOptional");
+			return CommandProcessUtils.msg("ambiguousOptional");
 		}
 		return null;
 	}
@@ -278,10 +276,10 @@ public class Command {
 	private Result<Object, String> processTakeAllArg(CommandArgument arg, List<String> args, List<Boolean> quoted, int start, Object[] output, int offset, CommandSender sender) {
 		if (start >= args.size()) {
 			if (!arg.isOptional()) {
-				return new Result<>(this, null, Messages.msg("needArgument").replace("%arg%", arg.getName()));
+				return new Result<>(this, null, CommandProcessUtils.msg("needArgument").replace("%arg%", arg.getName()));
 			}
 			if (arg.isContextDefault() && !(sender instanceof Player)) {
-				return new Result<>(this, null, Messages.msg("contextDefaultFromConsole").replace("%arg%", arg.getName()));
+				return new Result<>(this, null, CommandProcessUtils.msg("contextDefaultFromConsole").replace("%arg%", arg.getName()));
 			}
 		}
 		if (arg.consumes()) {
@@ -351,13 +349,13 @@ public class Command {
 				continue;
 			}
 			if (i == args.size() - 1) {
-				return Messages.msg("needFlagValue").replace("%flag%", flag.getName());
+				return CommandProcessUtils.msg("needFlagValue").replace("%flag%", flag.getName());
 			}
 			String next = args.get(i + 1);
 			try {
 				output[flag.getPosition() + 1] = Objects.requireNonNull(flag.getType().convert(sender, null, next));
 			} catch (Exception ex) {
-				return Messages.msg("invalidArgument").replace("%arg%", flag.getName()).replace("%value%", next);
+				return CommandProcessUtils.msg("invalidArgument").replace("%arg%", flag.getName()).replace("%value%", next);
 			}
 			args.subList(i, i + 2).clear();
 			quoted.subList(i, i + 1).clear();
@@ -372,7 +370,7 @@ public class Command {
 				continue;
 			}
 			if (flag.isContextDefault() && !(sender instanceof Player)) {
-				return Messages.msg("contextDefaultFlagFromConsole").replace("%flag%", flag.getName());
+				return CommandProcessUtils.msg("contextDefaultFlagFromConsole").replace("%flag%", flag.getName());
 			}
 			output[flag.getPosition() + 1] = flag.getDefaultValue(sender);
 		}
@@ -381,7 +379,7 @@ public class Command {
 	
 	private Object[] getContext(CommandSender sender) {
 		if (!(sender instanceof Player)) {
-			sender.sendMessage(Messages.msg("playerOnly"));
+			sender.sendMessage(CommandProcessUtils.msg("playerOnly"));
 			return null;
 		}
 		Object[] output = new Object[contextProviders.length];
@@ -403,7 +401,7 @@ public class Command {
 	
 	private boolean assertAll(CommandSender sender) {
 		if (!(sender instanceof Player)) {
-			sender.sendMessage(Messages.msg("playerOnly"));
+			sender.sendMessage(CommandProcessUtils.msg("playerOnly"));
 			return false;
 		}
 		for (ContextProvider<?> provider : asserters) {
@@ -643,7 +641,7 @@ public class Command {
 	
 	protected Result<Boolean, String> execute(CommandSender sender, String[] args, Object[] parentArgs) {
 		if (permission != null && !sender.hasPermission(permission)) {
-			sender.sendMessage(msg("noPermission").replace("%permission%", permission));
+			sender.sendMessage(CommandProcessUtils.msg("noPermission").replace("%permission%", permission));
 			return new Result<>(this, true, null);
 		}
 		if (args.length > 0 && args[0].equalsIgnoreCase("help") && !noHelp) {
@@ -676,7 +674,7 @@ public class Command {
 			results.add(result);
 		}
 		Result<Boolean, String> deepest = results.stream().max(Comparator.comparingInt(r -> r.getCommand().getDepth())).orElse(
-				new Result<>(this, false, Messages.msg("invalidSubcommand").replace("%value%", args[0]))
+				new Result<>(this, false, CommandProcessUtils.msg("invalidSubcommand").replace("%value%", args[0]))
 		);
 		if (!topLevel) {
 			return deepest;
@@ -694,13 +692,13 @@ public class Command {
 				break;
 			case CONSOLE:
 				if (sender instanceof Player) {
-					sender.sendMessage(Messages.msg("consoleOnly"));
+					sender.sendMessage(CommandProcessUtils.msg("consoleOnly"));
 					return new Result<>(this, true, null);
 				}
 				break;
 			case PLAYER:
 				if (!(sender instanceof Player)) {
-					sender.sendMessage(Messages.msg("playerOnly"));
+					sender.sendMessage(CommandProcessUtils.msg("playerOnly"));
 					return new Result<>(this, true, null);
 				}
 				break;
@@ -751,7 +749,7 @@ public class Command {
 			return new Result<>(this, true, null);
 		} catch (IllegalAccessException | InvocationTargetException e) {
 			e.printStackTrace();
-			sender.sendMessage(msg("commandError"));
+			sender.sendMessage(CommandProcessUtils.msg("commandError"));
 			return new Result<>(this, true, null);
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();

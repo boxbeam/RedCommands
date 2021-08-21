@@ -8,9 +8,12 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import redempt.redlib.commandmanager.ArgType;
 import redempt.redlib.commandmanager.Command;
+import redempt.redlib.commandmanager.CommandParser;
 import redempt.redlib.commandmanager.Messages;
 
 import java.lang.reflect.Field;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +22,21 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class CommandProcessUtils {
+	
+	private static Messages globalMessages;
+	
+	static {
+		Path path = Paths.get("plugins/RedLib/command-format.txt");
+		globalMessages = Messages.load(CommandParser.class.getClassLoader().getResourceAsStream("command-format.txt"), path);
+	}
+	
+	public static Messages getCommandManagerMessages() {
+		return globalMessages;
+	}
+	
+	public static String msg(String message) {
+		return globalMessages.get(message);
+	}
 	
 	public static Plugin getCallingPlugin() {
 		Exception ex = new Exception();

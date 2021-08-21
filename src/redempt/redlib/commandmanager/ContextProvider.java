@@ -7,6 +7,7 @@ import java.util.function.Predicate;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import redempt.redlib.commandmanager.processing.CommandProcessUtils;
 
 /**
  * Used to provide context arguments to command method hooks
@@ -21,7 +22,7 @@ public class ContextProvider<T> {
 	 * Returns the item in the player's main hand, or errors if it is air.
 	 */
 	public static ContextProvider<ItemStack> mainHand = new ContextProvider<ItemStack>("mainhand",
-			Messages.msg("mustHoldItem"),
+			CommandProcessUtils.msg("mustHoldItem"),
 			c -> {
 				@SuppressWarnings("deprecation")
 				ItemStack item = c.getItemInHand();

@@ -135,7 +135,7 @@ public class CommandCollection {
 			if (results.stream().anyMatch(Result::getValue)) {
 				return null;
 			}
-			sender.sendMessage(Messages.msg("helpTitle").replace("%cmdname%", children.get(0).getName()));
+			sender.sendMessage(CommandProcessUtils.msg("helpTitle").replace("%cmdname%", children.get(0).getName()));
 			sender.sendMessage(getHelpRecursive(sender, 0));
 			return null;
 		}
