@@ -129,7 +129,7 @@ public class CommandProcessUtils {
 		try {
 			return new Result<>(command, Objects.requireNonNull(carg.getType().convert(sender, prev, arg)), null);
 		} catch (Exception e) {
-			return new Result<>(command, null, Messages.msg("invalidArgument").replace("%arg%", carg.getName()).replace("%value%", arg));
+			return new Result<>(command, null, msg("invalidArgument").replace("%arg%", carg.getName()).replace("%value%", arg));
 		}
 	}
 	
