@@ -1,5 +1,6 @@
 package redempt.redlib.commandmanager;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.entity.Player;
@@ -752,6 +753,12 @@ public class Command {
 			sender.sendMessage(CommandProcessUtils.msg("commandError"));
 			return new Result<>(this, true, null);
 		} catch (IllegalArgumentException e) {
+			StringJoiner joiner = new StringJoiner(", ", "[", "]");
+			for (Object o : objArgs) {
+				joiner.add(o.getClass().getName());
+			}
+			Bukkit.getLogger().warning("Could not invoke method hook " + hook + " for plugin " + plugin + " with arguments of types:");
+			Bukkit.getLogger().warning(joiner.toString());
 			e.printStackTrace();
 			if (topLevel) {
 				showHelp(sender);
