@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 /**
@@ -146,11 +147,22 @@ public class Messages {
 	private Plugin plugin;
 	private Map<String, String> messages;
 	private Map<String, String> defaults;
+	private UnaryOperator<String> formatter = s -> ChatColor.translateAlternateColorCodes('&', s);
 	
 	private Messages(Plugin plugin, Map<String, String> messages, Map<String, String> defaults) {
 		this.messages = messages;
 		this.defaults = defaults;
 		this.plugin = plugin;
+	}
+	
+	/**
+	 * Sets the function which will be used to format message strings before they are returned
+	 * @param formatter The function to format messages
+	 * @return Itself
+	 */
+	public Messages setFormatter(UnaryOperator<String> formatter) {
+		this.formatter = formatter;
+		return this;
 	}
 	
 	/**
@@ -170,7 +182,7 @@ public class Messages {
 		if (message == null) {
 			throw new IllegalArgumentException("Message '" + msg + "' does not have an assigned or default value!");
 		}
-		return ChatColor.translateAlternateColorCodes('&', message);
+		return formatter.apply(msg);
 	}
 	
 }
