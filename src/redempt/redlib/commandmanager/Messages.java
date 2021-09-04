@@ -1,8 +1,8 @@
 package redempt.redlib.commandmanager;
 
-import org.bukkit.ChatColor;
 import org.bukkit.plugin.Plugin;
 import redempt.redlib.commandmanager.processing.CommandProcessUtils;
+import redempt.redlib.misc.FormatUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -147,7 +147,7 @@ public class Messages {
 	private Plugin plugin;
 	private Map<String, String> messages;
 	private Map<String, String> defaults;
-	private UnaryOperator<String> formatter = s -> ChatColor.translateAlternateColorCodes('&', s);
+	private UnaryOperator<String> formatter = FormatUtils::color;
 	
 	private Messages(Plugin plugin, Map<String, String> messages, Map<String, String> defaults) {
 		this.messages = messages;
