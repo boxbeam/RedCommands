@@ -182,7 +182,7 @@ public class Messages {
 		if (message == null) {
 			throw new IllegalArgumentException("Message '" + msg + "' does not have an assigned or default value!");
 		}
-		return formatter.apply(msg);
+		return formatter.apply(message);
 	}
 	
 }

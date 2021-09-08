@@ -427,7 +427,10 @@ public class Command {
 	 * @param listeners The listener objects containing method hooks
 	 */
 	public void register(String prefix, Object... listeners) {
-		org.bukkit.command.Command cmd = new org.bukkit.command.Command(names[0], help == null ? "None" : help, "", Arrays.stream(names).skip(1).collect(Collectors.toList())) {
+		if (plugin == null) {
+			plugin = CommandProcessUtils.getCallingPlugin();
+		}
+		RedCommand cmd = new RedCommand(plugin, names[0], help == null ? "None" : help, "", Arrays.stream(names).skip(1).collect(Collectors.toList())) {
 			
 			@Override
 			public boolean execute(CommandSender sender, String name, String[] args) {
@@ -442,9 +445,6 @@ public class Command {
 			
 		};
 		commandMap.register(prefix, cmd);
-		if (plugin == null) {
-			plugin = CommandProcessUtils.getCallingPlugin();
-		}
 		new UnregisterListener(plugin, this::unregister);
 		registerHook(createHookMap(listeners), plugin);
 	}
