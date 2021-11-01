@@ -10,8 +10,9 @@ abstract class RedCommand extends Command implements PluginIdentifiableCommand {
 	
 	private Plugin plugin;
 	
-	protected RedCommand(Plugin plugin, String name, String description, String usageMessage, List<String> aliases) {
+	protected RedCommand(Plugin plugin, String name, String description, String usageMessage, String permission, List<String> aliases) {
 		super(name, description, usageMessage, aliases);
+		setPermission(permission);
 		this.plugin = plugin;
 	}
 	

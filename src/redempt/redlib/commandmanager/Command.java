@@ -430,7 +430,7 @@ public class Command {
 		if (plugin == null) {
 			plugin = CommandProcessUtils.getCallingPlugin();
 		}
-		RedCommand cmd = new RedCommand(plugin, names[0], help == null ? "None" : help, "", Arrays.stream(names).skip(1).collect(Collectors.toList())) {
+		RedCommand cmd = new RedCommand(plugin, names[0], help == null ? "None" : help, "", permission, Arrays.stream(names).skip(1).collect(Collectors.toList())) {
 			
 			@Override
 			public boolean execute(CommandSender sender, String name, String[] args) {
