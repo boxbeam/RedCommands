@@ -745,24 +745,26 @@ public class Command {
 			}
 			return null;
 		}
-		try {
-			methodHook.invoke(listener, objArgs);
-			return new Result<>(this, true, null);
-		} catch (IllegalAccessException | InvocationTargetException e) {
-			e.printStackTrace();
-			sender.sendMessage(CommandProcessUtils.msg("commandError"));
-			return new Result<>(this, true, null);
-		} catch (IllegalArgumentException e) {
-			StringJoiner joiner = new StringJoiner(", ", "[", "]");
-			for (Object o : objArgs) {
-				joiner.add(o.getClass().getName());
-			}
-			Bukkit.getLogger().warning("Could not invoke method hook " + hook + " for plugin " + plugin + " with arguments of types:");
-			Bukkit.getLogger().warning(joiner.toString());
-			e.printStackTrace();
-			if (topLevel) {
-				showHelp(sender);
+		if (methodHook != null) {
+			try {
+				methodHook.invoke(listener, objArgs);
 				return new Result<>(this, true, null);
+			} catch (IllegalAccessException | InvocationTargetException e) {
+				e.printStackTrace();
+				sender.sendMessage(CommandProcessUtils.msg("commandError"));
+				return new Result<>(this, true, null);
+			} catch (IllegalArgumentException e) {
+				StringJoiner joiner = new StringJoiner(", ", "[", "]");
+				for (Object o : objArgs) {
+					joiner.add(o.getClass().getName());
+				}
+				Bukkit.getLogger().warning("Could not invoke method hook " + hook + " for plugin " + plugin + " with arguments of types:");
+				Bukkit.getLogger().warning(joiner.toString());
+				e.printStackTrace();
+				if (topLevel) {
+					showHelp(sender);
+					return new Result<>(this, true, null);
+				}
 			}
 		}
 		return null;

@@ -131,7 +131,10 @@ public class ArgType<T> {
 	 * @return itself
 	 */
 	public ArgType<T> setTab(Function<CommandSender, List<String>> tab) {
-		this.tab = (c, s, o) -> tab.apply(c);
+		this.tab = (c, s, o) -> {
+			List<String> list = tab.apply(c);
+			return list == null ? new ArrayList<>() : list;
+		};
 		return this;
 	}
 	
@@ -141,7 +144,10 @@ public class ArgType<T> {
 	 * @return itself
 	 */
 	public ArgType<T> setTab(BiFunction<CommandSender, String[], List<String>> tab) {
-		this.tab = (c, s, o) -> tab.apply(c, s);
+		this.tab = (c, s, o) -> {
+			List<String> list = tab.apply(c, s);
+			return list == null ? new ArrayList<>() : list;
+		};
 		return this;
 	}
 	
@@ -156,7 +162,10 @@ public class ArgType<T> {
 	 * @return itself
 	 */
 	public ArgType<T> tabStream(Function<CommandSender, Stream<String>> tab) {
-		this.tab = (c, s, o) -> tab.apply(c).collect(Collectors.toList());
+		this.tab = (c, s, o) -> {
+			Stream<String> stream = tab.apply(c);
+			return stream == null ? new ArrayList<>() : stream.collect(Collectors.toList());
+		};
 		return this;
 	}
 	
@@ -166,7 +175,10 @@ public class ArgType<T> {
 	 * @return itself
 	 */
 	public ArgType<T> tabStream(BiFunction<CommandSender, String[], Stream<String>> tab) {
-		this.tab = (c, s, o) -> tab.apply(c, s).collect(Collectors.toList());
+		this.tab = (c, s, o) -> {
+			Stream<String> stream = tab.apply(c, s);
+			return stream == null ? new ArrayList<>() : stream.collect(Collectors.toList());
+		};
 		return this;
 	}
 	
