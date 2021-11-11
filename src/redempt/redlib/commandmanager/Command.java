@@ -731,7 +731,9 @@ public class Command {
 		if (hasPostArgChild && split.getValue().length > this.args.length && !quoted[toProcess.length]) {
 			int spaces = (int) Arrays.stream(toProcess).filter(s -> s.contains(" ")).count();
 			int start = this.args.length + spaces;
+			int parentArgsLength = parent == null || parent.args == null ? 0 : parent.args.length + 1;
 			String[] truncArgs = Arrays.copyOfRange(args, start + 1, args.length);
+			parentArgs = Arrays.copyOfRange(parentArgs, parentArgsLength, parentArgs.length);
 			Object[] combined = CommandProcessUtils.combine(parentArgs, objArgs);
 			for (Command command : children) {
 				if (!command.isPostArg() || !command.nameMatches(args[start])) {
