@@ -76,10 +76,30 @@ public class CommandProcessUtils {
 	
 	public static List<ArgType<?>> getBaseArgTypes() {
 		List<ArgType<?>> types = new ArrayList<>();
-		types.add(new ArgType<>("int", (Function<String, Integer>) Integer::parseInt));
-		types.add(new ArgType<>("double", Double::parseDouble));
-		types.add(new ArgType<>("float", Float::parseFloat));
-		types.add(new ArgType<>("long", (Function<String, Long>) Long::parseLong));
+		types.add(new ArgType<>("int", (Function<String, Integer>) Integer::parseInt).constraint((c, v) -> {
+			String[] split = c.split(",");
+			int min = split[0].length() == 0 ? Integer.MIN_VALUE : Integer.parseInt(split[0]);
+			int max = split[1].length() == 0 ? Integer.MAX_VALUE : Integer.parseInt(split[1]);
+			return v >= min && v <= max;
+		}));
+		types.add(new ArgType<>("double", Double::parseDouble).constraint((c, v) -> {
+			String[] split = c.split(",");
+			double min = split[0].length() == 0 ? Double.MIN_VALUE : Double.parseDouble(split[0]);
+			double max = split[1].length() == 0 ? Double.MIN_VALUE : Double.parseDouble(split[1]);
+			return v >= min && v <= max;
+		}));
+		types.add(new ArgType<>("float", Float::parseFloat).constraint((c, v) -> {
+			String[] split = c.split(",");
+			float min = split[0].length() == 0 ? Float.MIN_VALUE : Float.parseFloat(split[0]);
+			float max = split[1].length() == 0 ? Float.MIN_VALUE : Float.parseFloat(split[1]);
+			return v >= min && v <= max;
+		}));
+		types.add(new ArgType<>("long", (Function<String, Long>) Long::parseLong).constraint((c, v) -> {
+			String[] split = c.split(",");
+			long min = split[0].length() == 0 ? Long.MIN_VALUE : Long.parseLong(split[0]);
+			long max = split[1].length() == 0 ? Long.MIN_VALUE : Long.parseLong(split[1]);
+			return v >= min && v <= max;
+		}));
 		types.add(new ArgType<>("string", s -> s));
 		types.add(new ArgType<>("boolean", s -> {
 			switch (s.toLowerCase()) {
@@ -127,9 +147,9 @@ public class CommandProcessUtils {
 			prev = output[pos];
 		}
 		try {
-			return new Result<>(command, Objects.requireNonNull(carg.getType().convert(sender, prev, arg)), null);
+			return new Result<>(command, Objects.requireNonNull(carg.getType().convert(sender, prev, arg, carg.getConstraint())), null);
 		} catch (Exception e) {
-			return new Result<>(command, null, msg("invalidArgument").replace("%arg%", carg.getName()).replace("%value%", arg));
+			return new Result<>(command, null, msg("invalidArgument").replace("%arg%", carg.getNameAndConstraint()).replace("%value%", arg));
 		}
 	}
 	

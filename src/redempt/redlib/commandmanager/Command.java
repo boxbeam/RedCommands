@@ -373,9 +373,9 @@ public class Command {
 			}
 			String next = args.get(i + 1);
 			try {
-				output[flag.getPosition() + 1] = Objects.requireNonNull(flag.getType().convert(sender, null, next));
+				output[flag.getPosition() + 1] = Objects.requireNonNull(flag.getType().convert(sender, null, next, flag.getConstraint()));
 			} catch (Exception ex) {
-				return CommandProcessUtils.msg("invalidArgument").replace("%arg%", flag.getName()).replace("%value%", next);
+				return CommandProcessUtils.msg("invalidArgument").replace("%arg%", flag.getNameAndConstraint()).replace("%value%", next);
 			}
 			args.subList(i, i + 2).clear();
 			quoted.subList(i, i + 1).clear();
@@ -688,7 +688,7 @@ public class Command {
 		if (arg.getType().getParent() != null) {
 			previous = getPrevious(args, pos - 1, argNum - 1, sender);
 		}
-		return prevArg.getType().convert(sender, previous, args[pos - 1]);
+		return prevArg.getType().convert(sender, previous, args[pos - 1], prevArg.getConstraint());
 	}
 	
 	protected Result<Boolean, String> execute(CommandSender sender, String[] args, List<Object> prepend) {

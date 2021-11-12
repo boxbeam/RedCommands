@@ -10,14 +10,16 @@ public class CommandFlag implements CommandParameter {
 
 	private ArgType<?> type;
 	private String name;
+	private String constraint;
 	private String[] names;
 	private int pos;
 	private Function<CommandSender, Object> defaultValue = null;
 	private boolean contextDefault;
 	
-	public CommandFlag(ArgType<?> type, String name, int pos, Function<CommandSender, Object> defaultValue, boolean contextDefault) {
+	public CommandFlag(ArgType<?> type, String name, String constraint, int pos, Function<CommandSender, Object> defaultValue, boolean contextDefault) {
 		this.type = type;
 		this.name = name;
+		this.constraint = constraint;
 		this.names = name.split(",");
 		this.pos = pos;
 		this.defaultValue = defaultValue;
@@ -30,6 +32,10 @@ public class CommandFlag implements CommandParameter {
 	
 	public int getPosition() {
 		return pos;
+	}
+	
+	public String getConstraint() {
+		return constraint;
 	}
 	
 	@Override
@@ -51,6 +57,10 @@ public class CommandFlag implements CommandParameter {
 	
 	public String getName() {
 		return name;
+	}
+	
+	public String getNameAndConstraint() {
+		return name + (constraint == null ? "" : "<" + constraint + ">");
 	}
 	
 	public String[] getNames() {

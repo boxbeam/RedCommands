@@ -9,6 +9,7 @@ public class CommandArgument implements CommandParameter {
 	
 	private ArgType<?> type;
 	private String name;
+	private String constraint;
 	private boolean optional;
 	private boolean hideType;
 	private boolean consume;
@@ -17,8 +18,9 @@ public class CommandArgument implements CommandParameter {
 	private Function<CommandSender, Object> defaultValue = null;
 	public int pos;
 	
-	public CommandArgument(ArgType<?> type, int pos, String name, boolean optional, boolean hideType, boolean consume, boolean vararg) {
+	public CommandArgument(ArgType<?> type, int pos, String name, String constraint, boolean optional, boolean hideType, boolean consume, boolean vararg) {
 		this.name = name;
+		this.constraint = constraint;
 		this.type = type;
 		this.pos = pos;
 		this.optional = optional;
@@ -29,6 +31,10 @@ public class CommandArgument implements CommandParameter {
 	
 	public String getName() {
 		return name;
+	}
+	
+	public String getNameAndConstraint() {
+		return name + (constraint == null ? "" : "<" + constraint + ">");
 	}
 	
 	public boolean isContextDefault() {
@@ -71,6 +77,10 @@ public class CommandArgument implements CommandParameter {
 	
 	public boolean isVararg() {
 		return vararg;
+	}
+	
+	public String getConstraint() {
+		return constraint;
 	}
 	
 	public boolean takesAll() {

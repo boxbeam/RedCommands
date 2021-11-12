@@ -151,7 +151,7 @@ public class CommandParser {
 							if (arg.consumes() || arg.isVararg()) {
 								throw error("Flags cannot be consuming or vararg", pos);
 							}
-							CommandFlag flag = new CommandFlag(arg.getType(), arg.getName(), arg.getPosition(), arg.getDefaultValue(), arg.isContextDefault());
+							CommandFlag flag = new CommandFlag(arg.getType(), arg.getName(), arg.getConstraint(), arg.getPosition(), arg.getDefaultValue(), arg.isContextDefault());
 							for (String name : flag.getNames()) {
 								if (!name.startsWith("-")) {
 									throw error("All flag names and aliases must start with a dash", pos);
@@ -305,6 +305,7 @@ public class CommandParser {
 		if (argSplit.length != 2) {
 			throw error("Invalid command argument syntax" + arg, pos);
 		}
+		String constraint = null;
 		boolean consumes = false;
 		boolean vararg = false;
 		if (argSplit[0].endsWith("...")) {
@@ -317,6 +318,14 @@ public class CommandParser {
 			if (consumes) {
 				throw error("Argument cannot be both consuming and vararg", pos);
 			}
+		}
+		if (argSplit[0].endsWith(">")) {
+			int start = argSplit[0].indexOf('<');
+			if (start == -1) {
+				throw error("Invalid syntax for constraint", pos);
+			}
+			constraint = argSplit[0].substring(start + 1, argSplit[0].length() - 1);
+			argSplit[0] = argSplit[0].substring(0, start);
 		}
 		ArgType<?> argType = Command.getType(argSplit[0], argTypes);
 		if (argType == null) {
@@ -359,7 +368,7 @@ public class CommandParser {
 				defaultValue = c -> provider.provide((Player) c);
 				contextDefault = true;
 			} else {
-				defaultValue = c -> argType.convert(c, null, value.startsWith("\\") ? value.substring(1) : value);
+				defaultValue = c -> argType.convert(c, null, value.startsWith("\\") ? value.substring(1) : value, null);
 			}
 		}
 		if (name.endsWith("*?") || name.endsWith("?*")) {
@@ -378,7 +387,7 @@ public class CommandParser {
 		if (name.equals(argType.getName())) {
 			hideType = true;
 		}
-		CommandArgument carg = new CommandArgument(argType, argPos - 1, name, optional, hideType, consumes, vararg);
+		CommandArgument carg = new CommandArgument(argType, argPos - 1, name, constraint, optional, hideType, consumes, vararg);
 		if (carg.isOptional() || name.startsWith("-")) {
 			carg.setDefaultValue(defaultValue, contextDefault);
 		}
@@ -396,17 +405,30 @@ public class CommandParser {
 	private static String[] splitArgs(String args) {
 		List<String> split = new ArrayList<>();
 		StringBuilder combine = new StringBuilder();
-		int depth = 0;
-		for (char c : args.toCharArray()) {
+		int[] depth = {0, 0};
+		for (int i = 0; i < args.length(); i++) {
+			char c = args.charAt(i);
 			switch (c) {
+				case '\\':
+					if (i + 1 < args.length()) {
+						combine.append(args.charAt(i + 1));
+						i++;
+					}
+					break;
 				case '(':
-					depth++;
+					depth[0]++;
 					break;
 				case ')':
-					depth--;
+					depth[0]--;
+					break;
+				case '<':
+					depth[1]++;
+					break;
+				case '>':
+					depth[1]--;
 					break;
 				case ' ':
-					if (depth == 0) {
+					if (depth[0] == 0 && depth[1] == 0) {
 						split.add(combine.toString());
 						combine = new StringBuilder();
 					} else {
