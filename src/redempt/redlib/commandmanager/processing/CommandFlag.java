@@ -6,7 +6,7 @@ import redempt.redlib.commandmanager.ArgType;
 import java.util.Arrays;
 import java.util.function.Function;
 
-public class Flag {
+public class CommandFlag implements CommandParameter {
 
 	private ArgType<?> type;
 	private String name;
@@ -15,7 +15,7 @@ public class Flag {
 	private Function<CommandSender, Object> defaultValue = null;
 	private boolean contextDefault;
 	
-	public Flag(ArgType<?> type, String name, int pos, Function<CommandSender, Object> defaultValue, boolean contextDefault) {
+	public CommandFlag(ArgType<?> type, String name, int pos, Function<CommandSender, Object> defaultValue, boolean contextDefault) {
 		this.type = type;
 		this.name = name;
 		this.names = name.split(",");
@@ -30,6 +30,11 @@ public class Flag {
 	
 	public int getPosition() {
 		return pos;
+	}
+	
+	@Override
+	public String getTypeName() {
+		return type.getName();
 	}
 	
 	public ArgType<?> getType() {

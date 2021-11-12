@@ -8,8 +8,9 @@ import org.bukkit.plugin.Plugin;
 import redempt.redlib.commandmanager.CommandCollection.MergedBaseCommand;
 import redempt.redlib.commandmanager.exceptions.CommandHookException;
 import redempt.redlib.commandmanager.processing.CommandArgument;
+import redempt.redlib.commandmanager.processing.CommandParameter;
 import redempt.redlib.commandmanager.processing.CommandProcessUtils;
-import redempt.redlib.commandmanager.processing.Flag;
+import redempt.redlib.commandmanager.processing.CommandFlag;
 import redempt.redlib.commandmanager.processing.Result;
 import redempt.redlib.commandmanager.processing.UnregisterListener;
 
@@ -33,8 +34,8 @@ public class Command {
 	protected List<Command> children = new ArrayList<>();
 	protected Plugin plugin;
 	private CommandArgument[] args;
-	private Flag[] flags;
-	private Map<Character, Flag> charBoolFlags = new HashMap<>();
+	private CommandFlag[] flags;
+	private Map<Character, CommandFlag> charBoolFlags = new HashMap<>();
 	private ContextProvider<?>[] contextProviders;
 	private ContextProvider<?>[] asserters;
 	protected String[] names;
@@ -54,13 +55,13 @@ public class Command {
 	
 	protected Command() {}
 	
-	protected Command(String[] names, CommandArgument[] args, Flag[] flags, ContextProvider<?>[] providers,
+	protected Command(String[] names, CommandArgument[] args, CommandFlag[] flags, ContextProvider<?>[] providers,
 	                  ContextProvider<?>[] asserters, String help, String permission, SenderType type, String hook,
 	                  List<Command> children, boolean hideSub, boolean noTab, boolean noHelp, boolean postArg) {
 		this.names = names;
 		this.args = args;
 		this.flags = flags;
-		for (Flag flag : flags) {
+		for (CommandFlag flag : flags) {
 			if (!flag.getType().getName().equals("boolean")) {
 				continue;
 			}
@@ -163,7 +164,7 @@ public class Command {
 			current = current.parent;
 		}
 		StringBuilder builder = new StringBuilder();
-		while (stack.size() != 0) {
+		while (!stack.isEmpty()) {
 			builder.append(stack.pop()).append(' ');
 		}
 		while (builder.charAt(builder.length() - 1) == ' ') {
@@ -176,7 +177,7 @@ public class Command {
 	 * @return The display of the arguments for this command
 	 */
 	public String getArgsDisplay() {
-		String display = flags.length > 0 ? String.join(" ", Arrays.stream(flags).map(Flag::toString).collect(Collectors.toList())) + " " : "";
+		String display = flags.length > 0 ? String.join(" ", Arrays.stream(flags).map(CommandFlag::toString).collect(Collectors.toList())) + " " : "";
 		display += String.join(" ", Arrays.stream(args).map(CommandArgument::toString).collect(Collectors.toList()));
 		return display;
 	}
@@ -345,12 +346,12 @@ public class Command {
 			if (!arg.startsWith("-") || quoted.get(i)) {
 				continue;
 			}
-			Flag flag = Arrays.stream(flags).filter(f -> f.nameMatches(arg)).findFirst().orElse(null);
+			CommandFlag flag = Arrays.stream(flags).filter(f -> f.nameMatches(arg)).findFirst().orElse(null);
 			if (flag == null) {
 				if (charBoolFlags == null) {
 					continue;
 				}
-				List<Flag> flags = arg.chars().skip(1).mapToObj(c -> (char) c).map(charBoolFlags::get).collect(Collectors.toList());
+				List<CommandFlag> flags = arg.chars().skip(1).mapToObj(c -> (char) c).map(charBoolFlags::get).collect(Collectors.toList());
 				if (flags.stream().anyMatch(Objects::isNull)) {
 					continue;
 				}
@@ -380,7 +381,7 @@ public class Command {
 			quoted.subList(i, i + 1).clear();
 			i--;
 		}
-		for (Flag flag : flags) {
+		for (CommandFlag flag : flags) {
 			if (output[flag.getPosition() + 1] != null) {
 				continue;
 			}
@@ -487,6 +488,37 @@ public class Command {
 		return hooks;
 	}
 	
+	private String getExpectedParameterTypes() {
+		List<String> expectedArgs = new ArrayList<>();
+		expectedArgs.add("commandsender");
+		boolean lastPostArg = false;
+		Command current = this;
+		Stack<List<String>> prev = new Stack<>();
+		while (current != null) {
+			if (lastPostArg) {
+				prev.add(current.getArgumentTypeNames());
+			}
+			lastPostArg = current.postArg;
+			current = current.parent;
+		}
+		while (!prev.isEmpty()) {
+			expectedArgs.addAll(prev.pop());
+		}
+		expectedArgs.addAll(getArgumentTypeNames());
+		for (ContextProvider<?> provider : contextProviders) {
+			expectedArgs.add("context:" + provider.getName());
+		}
+		return String.join(", ", expectedArgs);
+	}
+	
+	private List<String> getArgumentTypeNames() {
+		List<CommandParameter> params = new ArrayList<>();
+		Collections.addAll(params, flags);
+		Collections.addAll(params, args);
+		params.sort(Comparator.comparingInt(CommandParameter::getPosition));
+		return params.stream().map(CommandParameter::getTypeName).collect(Collectors.toList());
+	}
+	
 	protected void registerHook(Map<String, MethodHook> hooks, Plugin plugin) {
 		for (Command child : children) {
 			child.registerHook(hooks, plugin);
@@ -501,6 +533,7 @@ public class Command {
 		}
 		methodHook = mh.getMethod();
 		Class<?>[] params = methodHook.getParameterTypes();
+		
 		int expectedLength = args.length + contextProviders.length + flags.length + 1;
 		Command current = this;
 		while (current != null) {
@@ -511,7 +544,7 @@ public class Command {
 		}
 		if (params.length != expectedLength) {
 			throw new IllegalStateException("Incorrect number of arguments for method hook! [" + methodHook.getDeclaringClass().getName() + "." + methodHook.getName() + "] "
-					+ "Argument count should be " + expectedLength + ", got " + params.length);
+					+ "Argument count should be " + expectedLength + ", got " + params.length + "\nParameters should be: [" + getExpectedParameterTypes() + "]");
 		}
 		this.listener = mh.getListener();
 		if (!CommandSender.class.isAssignableFrom(params[0])) {
@@ -581,13 +614,13 @@ public class Command {
 		if (args.size() == 0) {
 			return new Result<>(this, false, new ArrayList<>());
 		}
-		Set<Flag> used = new HashSet<>();
+		Set<CommandFlag> used = new HashSet<>();
 		for (int i = 0; i < args.size() - 1; i++) {
 			String arg = args.get(i);
 			if (!arg.startsWith("-")) {
 				continue;
 			}
-			Flag flag = Arrays.stream(flags).filter(f -> f.nameMatches(arg)).findFirst().orElse(null);
+			CommandFlag flag = Arrays.stream(flags).filter(f -> f.nameMatches(arg)).findFirst().orElse(null);
 			if (flag == null) {
 				continue;
 			}
@@ -615,7 +648,7 @@ public class Command {
 			return new Result<>(this, false, completions);
 		}
 		String nextToLast = args.get(args.size() - 2);
-		Flag flag = Arrays.stream(flags).filter(f -> f.nameMatches(nextToLast)).findFirst().orElse(null);
+		CommandFlag flag = Arrays.stream(flags).filter(f -> f.nameMatches(nextToLast)).findFirst().orElse(null);
 		if (flag == null) {
 			return new Result<>(this, false, completions);
 		}

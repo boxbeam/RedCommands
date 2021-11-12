@@ -5,13 +5,9 @@ import org.bukkit.entity.Player;
 import redempt.redlib.commandmanager.Command.SenderType;
 import redempt.redlib.commandmanager.exceptions.CommandParseException;
 import redempt.redlib.commandmanager.processing.CommandArgument;
-import redempt.redlib.commandmanager.processing.CommandProcessUtils;
-import redempt.redlib.commandmanager.processing.Flag;
+import redempt.redlib.commandmanager.processing.CommandFlag;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -112,7 +108,7 @@ public class CommandParser {
 		String help = null;
 		String[] names = null;
 		List<CommandArgument> args = new ArrayList<>();
-		List<Flag> flags = new ArrayList<>();
+		List<CommandFlag> flags = new ArrayList<>();
 		List<ContextProvider<?>> contextProviders = new ArrayList<>();
 		List<ContextProvider<?>> asserters = new ArrayList<>();
 		String permission = null;
@@ -155,7 +151,7 @@ public class CommandParser {
 							if (arg.consumes() || arg.isVararg()) {
 								throw error("Flags cannot be consuming or vararg", pos);
 							}
-							Flag flag = new Flag(arg.getType(), arg.getName(), arg.getPosition(), arg.getDefaultValue(), arg.isContextDefault());
+							CommandFlag flag = new CommandFlag(arg.getType(), arg.getName(), arg.getPosition(), arg.getDefaultValue(), arg.isContextDefault());
 							for (String name : flag.getNames()) {
 								if (!name.startsWith("-")) {
 									throw error("All flag names and aliases must start with a dash", pos);
@@ -274,7 +270,7 @@ public class CommandParser {
 						}
 					}
 					commands.add(new Command(names, args.toArray(new CommandArgument[args.size()]),
-							flags.toArray(new Flag[flags.size()]),
+							flags.toArray(new CommandFlag[flags.size()]),
 							contextProviders.toArray(new ContextProvider<?>[contextProviders.size()]),
 							asserters.toArray(new ContextProvider<?>[asserters.size()]),
 							help, permission, type, hook, children, hideSub, noTab, noHelp, postArg));

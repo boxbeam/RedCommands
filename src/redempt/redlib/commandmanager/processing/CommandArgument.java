@@ -5,7 +5,7 @@ import redempt.redlib.commandmanager.ArgType;
 
 import java.util.function.Function;
 
-public class CommandArgument {
+public class CommandArgument implements CommandParameter {
 	
 	private ArgType<?> type;
 	private String name;
@@ -50,6 +50,11 @@ public class CommandArgument {
 	
 	public int getPosition() {
 		return pos;
+	}
+	
+	@Override
+	public String getTypeName() {
+		return type.getName();
 	}
 	
 	public ArgType<?> getType() {
