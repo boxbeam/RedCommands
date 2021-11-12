@@ -5,6 +5,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import redempt.redlib.commandmanager.CommandCollection.MergedBaseCommand;
 import redempt.redlib.commandmanager.exceptions.CommandHookException;
 import redempt.redlib.commandmanager.processing.CommandArgument;
 import redempt.redlib.commandmanager.processing.CommandProcessUtils;
@@ -150,15 +151,34 @@ public class Command {
 	 * @return The expanded name of the command, plus arguments
 	 */
 	public String getFullName() {
-		String name;
-		if (postArg) {
-			name = parent.getFullName() + " " + names[0] + " ";
-		} else {
-			 name = getExpandedName() + " ";
+		Stack<String> stack = new Stack<>();
+		Command current = this;
+		boolean lastPostArg = true;
+		while (current != null && !(current instanceof MergedBaseCommand)) {
+			if (lastPostArg) {
+				stack.add(current.getArgsDisplay());
+			}
+			stack.add(current.getName());
+			lastPostArg = current.postArg;
+			current = current.parent;
 		}
-		name += flags.length > 0 ? String.join(" ", Arrays.stream(flags).map(Flag::toString).collect(Collectors.toList())) + " " : "";
-		name += String.join(" ", Arrays.stream(args).map(CommandArgument::toString).collect(Collectors.toList()));
-		return name.trim();
+		StringBuilder builder = new StringBuilder();
+		while (stack.size() != 0) {
+			builder.append(stack.pop()).append(' ');
+		}
+		while (builder.charAt(builder.length() - 1) == ' ') {
+			builder.deleteCharAt(builder.length() - 1);
+		}
+		return "/" + builder;
+	}
+	
+	/**
+	 * @return The display of the arguments for this command
+	 */
+	public String getArgsDisplay() {
+		String display = flags.length > 0 ? String.join(" ", Arrays.stream(flags).map(Flag::toString).collect(Collectors.toList())) + " " : "";
+		display += String.join(" ", Arrays.stream(args).map(CommandArgument::toString).collect(Collectors.toList()));
+		return display;
 	}
 	
 	/**
@@ -166,19 +186,17 @@ public class Command {
 	 */
 	public String getExpandedName() {
 		String name = names[0];
-		if (parent != null) {
+		if (parent != null && !(parent instanceof MergedBaseCommand)) {
 			name = parent.getExpandedName() + " " + name;
 			return name;
 		}
 		return "/" + name;
 	}
 	
-	private Result<Object[], String> processArgs(String[] argArray, Boolean[] quoted, Object[] prepend, CommandSender sender) {
-		Object[] output = new Object[args.length + flags.length + 1 + Math.max(0, prepend.length - 1)];
-		if (prepend.length != 0) {
-			System.arraycopy(prepend, 1, output, 1, prepend.length - 1);
-		}
-		int offset = 1 + Math.max(0, prepend.length - 1);
+	private Result<Object[], String> processArgs(String[] argArray, Boolean[] quoted, List<Object> prepend, CommandSender sender) {
+		Object[] output = new Object[args.length + flags.length + 1 + prepend.size()];
+		System.arraycopy(prepend.toArray(), 0, output, 1, prepend.size());
+		int offset = prepend.size() + 1;
 		output[0] = sender;
 		List<String> args = new ArrayList<>();
 		List<Boolean> quotedList = new ArrayList<>();
@@ -434,7 +452,7 @@ public class Command {
 			
 			@Override
 			public boolean execute(CommandSender sender, String name, String[] args) {
-				Command.this.execute(sender, args, new Object[0]);
+				Command.this.execute(sender, args, new ArrayList<>());
 				return true;
 			}
 			
@@ -640,7 +658,7 @@ public class Command {
 		return prevArg.getType().convert(sender, previous, args[pos - 1]);
 	}
 	
-	protected Result<Boolean, String> execute(CommandSender sender, String[] args, Object[] parentArgs) {
+	protected Result<Boolean, String> execute(CommandSender sender, String[] args, List<Object> prepend) {
 		if (permission != null && !sender.hasPermission(permission)) {
 			sender.sendMessage(CommandProcessUtils.msg("noPermission").replace("%permission%", permission));
 			return new Result<>(this, true, null);
@@ -651,7 +669,7 @@ public class Command {
 		}
 		List<Result<Boolean, String>> results = new ArrayList<>();
 		if (methodHook != null || hasPostArgChild) {
-			Result<Boolean, String> result = runHook(sender, args, parentArgs, results);
+			Result<Boolean, String> result = runHook(sender, args, prepend, results);
 			if (result != null) {
 				return result;
 			}
@@ -668,7 +686,7 @@ public class Command {
 			if (command.isPostArg() || !command.nameMatches(args[0])) {
 				continue;
 			}
-			Result<Boolean, String> result = command.execute(sender, truncArgs, parentArgs);
+			Result<Boolean, String> result = command.execute(sender, truncArgs, prepend);
 			if (result.getValue()) {
 				return new Result<>(this, true, null);
 			}
@@ -687,7 +705,7 @@ public class Command {
 		return null;
 	}
 	
-	protected Result<Boolean, String> runHook(CommandSender sender, String[] args, Object[] parentArgs, List<Result<Boolean, String>> results) {
+	protected Result<Boolean, String> runHook(CommandSender sender, String[] args, List<Object> prepend, List<Result<Boolean, String>> results) {
 		switch (type) {
 			case EVERYONE:
 				break;
@@ -712,7 +730,7 @@ public class Command {
 			toProcess = next;
 		}
 		Boolean[] quoted = split.getMessage();
-		Result<Object[], String> result = processArgs(toProcess, quoted, parentArgs, sender);
+		Result<Object[], String> result = processArgs(toProcess, quoted, prepend, sender);
 		Object[] objArgs = result.getValue();
 		if (objArgs == null) {
 			results.add(new Result<>(this, false, result.getMessage()));
@@ -731,20 +749,24 @@ public class Command {
 		if (hasPostArgChild && split.getValue().length > this.args.length && !quoted[toProcess.length]) {
 			int spaces = (int) Arrays.stream(toProcess).filter(s -> s.contains(" ")).count();
 			int start = this.args.length + spaces;
-			int parentArgsLength = parent == null || parent.args == null ? 0 : parent.args.length + 1;
 			String[] truncArgs = Arrays.copyOfRange(args, start + 1, args.length);
-			parentArgs = Arrays.copyOfRange(parentArgs, parentArgsLength, parentArgs.length);
-			Object[] combined = CommandProcessUtils.combine(parentArgs, objArgs);
+			int rangeStart = objArgs.length - (contextProviders.length + this.args.length + this.flags.length);
+			int rangeEnd = objArgs.length - contextProviders.length;
+			for (int i = rangeStart; i < rangeEnd; i++) {
+				prepend.add(objArgs[i]);
+			}
 			for (Command command : children) {
 				if (!command.isPostArg() || !command.nameMatches(args[start])) {
 					continue;
 				}
-				Result<Boolean, String> execResult = command.execute(sender, truncArgs, combined);
+				Result<Boolean, String> execResult = command.execute(sender, truncArgs, prepend);
 				if (execResult.getValue()) {
 					return new Result<>(this, true, null);
 				}
 				results.add(execResult);
 			}
+			int rangeSize = rangeEnd - rangeStart;
+			prepend.subList(prepend.size() - rangeSize, prepend.size()).clear();
 			return null;
 		}
 		if (methodHook != null) {

@@ -114,7 +114,7 @@ public class CommandCollection {
 		return null;
 	}
 	
-	private static class MergedBaseCommand extends Command {
+	protected static class MergedBaseCommand extends Command {
 		
 		public MergedBaseCommand(List<Command> commands) {
 			this.children = commands;
@@ -127,12 +127,20 @@ public class CommandCollection {
 		}
 		
 		@Override
-		public Result<Boolean, String> execute(CommandSender sender, String[] args, Object[] prevArgs) {
-			List<Result<Boolean, String>> results = new ArrayList<>();
+		public Result<Boolean, String> execute(CommandSender sender, String[] args, List<Object> prepend) {
+			Result<Boolean, String> message = null;
 			for (Command cmd : children) {
-				results.add(cmd.execute(sender, args, prevArgs));
+				Result<Boolean, String> result = cmd.execute(sender, args, prepend);
+				if (result.getValue()) {
+					return null;
+				}
+				if (message == null) {
+					message = result;
+				}
 			}
-			if (results.stream().anyMatch(Result::getValue)) {
+			if (message != null) {
+				sender.sendMessage(message.getMessage());
+				message.getCommand().showHelp(sender);
 				return null;
 			}
 			sender.sendMessage(CommandProcessUtils.msg("helpTitle").replace("%cmdname%", children.get(0).getName()));
