@@ -76,25 +76,25 @@ public class CommandProcessUtils {
 	
 	public static List<ArgType<?>> getBaseArgTypes() {
 		List<ArgType<?>> types = new ArrayList<>();
-		types.add(new ArgType<>("int", (Function<String, Integer>) Integer::parseInt).constraint((c, v) -> {
+		types.add(new ArgType<>("int", (Function<String, Integer>) Integer::parseInt).constraint(msg("numberOutsideRange"), (c, v) -> {
 			String[] split = c.split(",");
 			int min = split[0].length() == 0 ? Integer.MIN_VALUE : Integer.parseInt(split[0]);
 			int max = split[1].length() == 0 ? Integer.MAX_VALUE : Integer.parseInt(split[1]);
 			return v >= min && v <= max;
 		}));
-		types.add(new ArgType<>("double", Double::parseDouble).constraint((c, v) -> {
+		types.add(new ArgType<>("double", Double::parseDouble).constraint(msg("numberOutsideRange"), (c, v) -> {
 			String[] split = c.split(",");
 			double min = split[0].length() == 0 ? Double.MIN_VALUE : Double.parseDouble(split[0]);
 			double max = split[1].length() == 0 ? Double.MIN_VALUE : Double.parseDouble(split[1]);
 			return v >= min && v <= max;
 		}));
-		types.add(new ArgType<>("float", Float::parseFloat).constraint((c, v) -> {
+		types.add(new ArgType<>("float", Float::parseFloat).constraint(msg("numberOutsideRange"), (c, v) -> {
 			String[] split = c.split(",");
 			float min = split[0].length() == 0 ? Float.MIN_VALUE : Float.parseFloat(split[0]);
 			float max = split[1].length() == 0 ? Float.MIN_VALUE : Float.parseFloat(split[1]);
 			return v >= min && v <= max;
 		}));
-		types.add(new ArgType<>("long", (Function<String, Long>) Long::parseLong).constraint((c, v) -> {
+		types.add(new ArgType<>("long", (Function<String, Long>) Long::parseLong).constraint(msg("numberOutsideRange"), (c, v) -> {
 			String[] split = c.split(",");
 			long min = split[0].length() == 0 ? Long.MIN_VALUE : Long.parseLong(split[0]);
 			long max = split[1].length() == 0 ? Long.MIN_VALUE : Long.parseLong(split[1]);
@@ -139,7 +139,11 @@ public class CommandProcessUtils {
 		return newArr;
 	}
 	
-	public static Result<Object, String> convertArg(Command command, CommandArgument carg, String arg, Object[] output, int offset, CommandSender sender) {
+	public static String getConversionFailMessage(CommandParameter carg, String arg) {
+		return msg("invalidArgument").replace("%arg%", carg.getNameAndConstraint()).replace("%value%", arg);
+	}
+	
+	public static Result<Object, String> convertArg(Command command, CommandParameter carg, String arg, Object[] output, int offset, CommandSender sender) {
 		ArgType<?> type = carg.getType();
 		Object prev = null;
 		int pos = carg.getPosition() + (offset - 1);
@@ -147,9 +151,21 @@ public class CommandProcessUtils {
 			prev = output[pos];
 		}
 		try {
-			return new Result<>(command, Objects.requireNonNull(carg.getType().convert(sender, prev, arg, carg.getConstraint())), null);
+			Object obj = carg.getType().convert(sender, prev, arg, carg.getConstraint());
+			if (obj != null) {
+				return Result.success(command, obj);
+			}
+			String error = getConversionFailMessage(carg, arg);
+			if (carg.getType().getFailedConstraintMessage() == null) {
+				return Result.failure(command, error);
+			}
+			obj = carg.getType().convert(sender, prev, arg, null);
+			if (obj != null) {
+				return Result.failure(command, error + "\n" + carg.getType().getFailedConstraintMessage());
+			}
+			return Result.failure(command, error);
 		} catch (Exception e) {
-			return new Result<>(command, null, msg("invalidArgument").replace("%arg%", carg.getNameAndConstraint()).replace("%value%", arg));
+			return Result.failure(command, getConversionFailMessage(carg, arg));
 		}
 	}
 	
@@ -189,7 +205,7 @@ public class CommandProcessUtils {
 			args.add(combine.toString());
 			quoted.add(false);
 		}
-		return new Result<>(null, args.toArray(new String[args.size()]), quoted.toArray(new Boolean[quoted.size()]));
+		return Result.result(null, args.toArray(new String[args.size()]), quoted.toArray(new Boolean[quoted.size()]));
 	}
 	
 }

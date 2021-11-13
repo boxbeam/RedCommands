@@ -59,10 +59,6 @@ public class CommandFlag implements CommandParameter {
 		return name;
 	}
 	
-	public String getNameAndConstraint() {
-		return name + (constraint == null ? "" : "<" + constraint + ">");
-	}
-	
 	public String[] getNames() {
 		return names;
 	}

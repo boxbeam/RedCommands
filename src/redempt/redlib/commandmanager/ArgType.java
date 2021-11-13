@@ -92,6 +92,7 @@ public class ArgType<T> {
 	private TabCompleter<?> tab = null;
 	private String name;
 	private ConstraintPredicate<T> constraint;
+	private String failedConstraintMessage;
 	
 	protected ArgType(String name, ArgType<?> parent, ArgConverter<T, ?> convert) {
 		if (name.contains(" ")) {
@@ -116,6 +117,10 @@ public class ArgType<T> {
 	 */
 	public ArgType(String name, Function<String, T> convert) {
 		this(name, (c, s) -> convert.apply(s));
+	}
+	
+	public String getFailedConstraintMessage() {
+		return failedConstraintMessage;
 	}
 	
 	/**
@@ -146,8 +151,7 @@ public class ArgType<T> {
 	 * @return itself
 	 */
 	public ArgType<T> constraint(ConstraintPredicate<T> constraint) {
-		this.constraint = constraint;
-		return this;
+		return constraint(null, constraint);
 	}
 	
 	/**
@@ -156,6 +160,29 @@ public class ArgType<T> {
 	 * @return itself
 	 */
 	public ArgType<T> constraint(BiPredicate<String, T> constraint) {
+		return constraint(null, constraint);
+	}
+	
+	/**
+	 * Set the handler to check constraints for this type
+	 * @param failedConstraintMessage The message to be shown when the constraint fails
+	 * @param constraint A predicate to check constraints - return false to fail
+	 * @return itself
+	 */
+	public ArgType<T> constraint(String failedConstraintMessage, ConstraintPredicate<T> constraint) {
+		this.failedConstraintMessage = failedConstraintMessage;
+		this.constraint = constraint;
+		return this;
+	}
+	
+	/**
+	 * Set the handler to check constraints for this type
+	 * @param failedConstraintMessage The message to be shown when the constraint fails
+	 * @param constraint A predicate to check constraints - return false to fail
+	 * @return itself
+	 */
+	public ArgType<T> constraint(String failedConstraintMessage, BiPredicate<String, T> constraint) {
+		this.failedConstraintMessage = failedConstraintMessage;
 		this.constraint = (c, s, v) -> constraint.test(s, v);
 		return this;
 	}

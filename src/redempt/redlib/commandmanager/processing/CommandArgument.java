@@ -33,10 +33,6 @@ public class CommandArgument implements CommandParameter {
 		return name;
 	}
 	
-	public String getNameAndConstraint() {
-		return name + (constraint == null ? "" : "<" + constraint + ">");
-	}
-	
 	public boolean isContextDefault() {
 		return contextDefault;
 	}
@@ -60,7 +56,14 @@ public class CommandArgument implements CommandParameter {
 	
 	@Override
 	public String getTypeName() {
-		return type.getName();
+		String typeName = type.getName();
+		if (vararg) {
+			typeName += "[]";
+		}
+		if (consume) {
+			typeName += "...";
+		}
+		return typeName;
 	}
 	
 	public ArgType<?> getType() {

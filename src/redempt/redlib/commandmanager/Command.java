@@ -207,16 +207,16 @@ public class Command {
 		
 		err = processFlags(args, output, quotedList, sender);
 		if (err != null) {
-			return new Result<>(this, null, err);
+			return Result.failure(this, err);
 		}
 		
 		List<CommandArgument> commandArgs = new ArrayList<>();
 		Collections.addAll(commandArgs, this.args);
 		err = convertArgs(commandArgs, args, quotedList, output, offset, sender);
 		if (err != null) {
-			return new Result<>(this, null, err);
+			return Result.failure(this, err);
 		}
-		return new Result<>(this, output, null);
+		return Result.success(this, output);
 	}
 	
 	private String getWrongArgumentCountMessage(Command command, int args, int optionals) {
@@ -296,15 +296,15 @@ public class Command {
 	private Result<Object, String> processTakeAllArg(CommandArgument arg, List<String> args, List<Boolean> quoted, int start, Object[] output, int offset, CommandSender sender) {
 		if (start >= args.size()) {
 			if (!arg.isOptional()) {
-				return new Result<>(this, null, CommandProcessUtils.msg("needArgument").replace("%arg%", arg.getName()));
+				return Result.failure(this, CommandProcessUtils.msg("needArgument").replace("%arg%", arg.getName()));
 			}
 			if (arg.isContextDefault() && !(sender instanceof Player)) {
-				return new Result<>(this, null, CommandProcessUtils.msg("contextDefaultFromConsole").replace("%arg%", arg.getName()));
+				return Result.failure(this, CommandProcessUtils.msg("contextDefaultFromConsole").replace("%arg%", arg.getName()));
 			}
 		}
 		if (arg.consumes()) {
 			if (start >= args.size()) {
-				return new Result<>(this, arg.getDefaultValue(sender), null);
+				return Result.success(this, arg.getDefaultValue(sender));
 			}
 			StringBuilder builder = new StringBuilder();
 			for (int i = start; i < args.size(); i++) {
@@ -327,7 +327,7 @@ public class Command {
 		if (start >= args.size()) {
 			Object arr = Array.newInstance(clazz, 1);
 			Array.set(arr, 0, arg.getDefaultValue(sender));
-			return new Result<>(this, arr, null);
+			return Result.success(this, arr);
 		}
 		Object arr = Array.newInstance(clazz, args.size() - start);
 		for (int i = start; i < args.size(); i++) {
@@ -337,7 +337,7 @@ public class Command {
 			}
 			Array.set(arr, i - start, convert.getValue());
 		}
-		return new Result<>(this, arr, null);
+		return Result.success(this, arr);
 	}
 	
 	private String processFlags(List<String> args, Object[] output, List<Boolean> quoted, CommandSender sender) {
@@ -372,11 +372,11 @@ public class Command {
 				return CommandProcessUtils.msg("needFlagValue").replace("%flag%", flag.getName());
 			}
 			String next = args.get(i + 1);
-			try {
-				output[flag.getPosition() + 1] = Objects.requireNonNull(flag.getType().convert(sender, null, next, flag.getConstraint()));
-			} catch (Exception ex) {
-				return CommandProcessUtils.msg("invalidArgument").replace("%arg%", flag.getNameAndConstraint()).replace("%value%", next);
+			Result<Object, String> result = CommandProcessUtils.convertArg(this, flag, next, null, 0, sender);
+			if (result.getMessage() != null) {
+				return result.getMessage();
 			}
+			output[flag.getPosition() + 1] = result.getValue();
 			args.subList(i, i + 2).clear();
 			quoted.subList(i, i + 1).clear();
 			i--;
@@ -612,7 +612,7 @@ public class Command {
 	
 	private Result<Boolean, List<String>> tabCompleteFlags(List<String> args, CommandSender sender) {
 		if (args.size() == 0) {
-			return new Result<>(this, false, new ArrayList<>());
+			return Result.result(this, false, new ArrayList<>());
 		}
 		Set<CommandFlag> used = new HashSet<>();
 		for (int i = 0; i < args.size() - 1; i++) {
@@ -636,24 +636,24 @@ public class Command {
 			}
 		}
 		if (args.size() == 0) {
-			return new Result<>(this, false, new ArrayList<>());
+			return Result.result(this, false, new ArrayList<>());
 		}
 		List<String> completions = new ArrayList<>();
 		String lastArg = args.get(args.size() - 1);
 		if (lastArg.startsWith("-")) {
 			Arrays.stream(flags).filter(f -> !used.contains(f)).forEach(f -> Collections.addAll(completions, f.getNames()));
-			return new Result<>(this, true, completions);
+			return Result.result(this, true, completions);
 		}
 		if (args.size() <= 1) {
-			return new Result<>(this, false, completions);
+			return Result.result(this, false, completions);
 		}
 		String nextToLast = args.get(args.size() - 2);
 		CommandFlag flag = Arrays.stream(flags).filter(f -> f.nameMatches(nextToLast)).findFirst().orElse(null);
 		if (flag == null) {
-			return new Result<>(this, false, completions);
+			return Result.result(this, false, completions);
 		}
 		completions.addAll(flag.getType().tabComplete(sender, args.toArray(new String[0]), null));
-		return new Result<>(this, true, completions);
+		return Result.result(this, true, completions);
 	}
 	
 	private List<String> tabCompleteArgument(CommandArgument arg, String[] str, CommandSender sender) {
@@ -694,11 +694,11 @@ public class Command {
 	protected Result<Boolean, String> execute(CommandSender sender, String[] args, List<Object> prepend) {
 		if (permission != null && !sender.hasPermission(permission)) {
 			sender.sendMessage(CommandProcessUtils.msg("noPermission").replace("%permission%", permission));
-			return new Result<>(this, true, null);
+			return Result.success(this, true);
 		}
 		if (args.length > 0 && args[0].equalsIgnoreCase("help") && !noHelp) {
 			showHelp(sender);
-			return new Result<>(this, true, null);
+			return Result.success(this, true);
 		}
 		List<Result<Boolean, String>> results = new ArrayList<>();
 		if (methodHook != null || hasPostArgChild) {
@@ -710,9 +710,9 @@ public class Command {
 		if (args.length == 0) {
 			if (topLevel) {
 				showHelp(sender);
-				return new Result<>(this, true, null);
+				return Result.success(this, true);
 			}
-			return new Result<>(this, false, results.stream().findFirst().map(Result::getMessage).orElse(null));
+			return Result.result(this, false, results.stream().findFirst().map(Result::getMessage).orElse(null));
 		}
 		String[] truncArgs = Arrays.copyOfRange(args, 1, args.length);
 		for (Command command : children) {
@@ -721,18 +721,18 @@ public class Command {
 			}
 			Result<Boolean, String> result = command.execute(sender, truncArgs, prepend);
 			if (result.getValue()) {
-				return new Result<>(this, true, null);
+				return Result.success(this, true);
 			}
 			results.add(result);
 		}
 		Result<Boolean, String> deepest = results.stream().max(Comparator.comparingInt(r -> r.getCommand().getDepth())).orElse(
-				new Result<>(this, false, CommandProcessUtils.msg("invalidSubcommand").replace("%value%", args[0]))
+				Result.result(this, false, CommandProcessUtils.msg("invalidSubcommand").replace("%value%", args[0]))
 		);
 		if (!topLevel) {
 			return deepest;
 		}
 		if (deepest.getMessage() != null) {
-			sender.sendMessage(deepest.getMessage());
+			Arrays.stream(deepest.getMessage().split("\n")).forEach(sender::sendMessage);
 		}
 		deepest.getCommand().showHelp(sender);
 		return null;
@@ -745,13 +745,13 @@ public class Command {
 			case CONSOLE:
 				if (sender instanceof Player) {
 					sender.sendMessage(CommandProcessUtils.msg("consoleOnly"));
-					return new Result<>(this, true, null);
+					return Result.success(this, true);
 				}
 				break;
 			case PLAYER:
 				if (!(sender instanceof Player)) {
 					sender.sendMessage(CommandProcessUtils.msg("playerOnly"));
-					return new Result<>(this, true, null);
+					return Result.success(this, true);
 				}
 				break;
 		}
@@ -766,16 +766,16 @@ public class Command {
 		Result<Object[], String> result = processArgs(toProcess, quoted, prepend, sender);
 		Object[] objArgs = result.getValue();
 		if (objArgs == null) {
-			results.add(new Result<>(this, false, result.getMessage()));
+			results.add(Result.result(this, false, result.getMessage()));
 			return null;
 		}
 		if (asserters.length > 0 && !assertAll(sender)) {
-			return new Result<>(this, true, null);
+			return Result.success(this, true);
 		}
 		if (contextProviders.length > 0) {
 			Object[] context = getContext(sender);
 			if (context == null) {
-				return new Result<>(this, true, null);
+				return Result.success(this, true);
 			}
 			objArgs = CommandProcessUtils.combine(objArgs, context);
 		}
@@ -794,7 +794,7 @@ public class Command {
 				}
 				Result<Boolean, String> execResult = command.execute(sender, truncArgs, prepend);
 				if (execResult.getValue()) {
-					return new Result<>(this, true, null);
+					return Result.success(this, true);
 				}
 				results.add(execResult);
 			}
@@ -805,11 +805,11 @@ public class Command {
 		if (methodHook != null) {
 			try {
 				methodHook.invoke(listener, objArgs);
-				return new Result<>(this, true, null);
+				return Result.success(this, true);
 			} catch (IllegalAccessException | InvocationTargetException e) {
 				e.printStackTrace();
 				sender.sendMessage(CommandProcessUtils.msg("commandError"));
-				return new Result<>(this, true, null);
+				return Result.success(this, true);
 			} catch (IllegalArgumentException e) {
 				StringJoiner joiner = new StringJoiner(", ", "[", "]");
 				for (Object o : objArgs) {
@@ -820,7 +820,7 @@ public class Command {
 				e.printStackTrace();
 				if (topLevel) {
 					showHelp(sender);
-					return new Result<>(this, true, null);
+					return Result.success(this, true);
 				}
 			}
 		}

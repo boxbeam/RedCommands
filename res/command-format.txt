@@ -15,3 +15,4 @@ contextDefaultFlagFromConsole: &cCannot infer default value of flag %flag% for c
 ambiguousOptional: &cThere is at least one ambiguous optional argument, please try again with no arguments omitted
 commandError: &cAn error was encountered in running this command. Please contact an admin.
 showUsage: &cUsage: %usage%
+numberOutsideRange: &cNumber outside allowed range
