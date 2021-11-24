@@ -397,46 +397,34 @@ public class Command {
 		return null;
 	}
 	
-	private Object[] getContext(CommandSender sender) {
+	private Result<Object[], String> getContext(CommandSender sender) {
 		if (!(sender instanceof Player)) {
-			sender.sendMessage(CommandProcessUtils.msg("playerOnly"));
-			return null;
+			return Result.failure(this, CommandProcessUtils.msg("playerOnly"));
 		}
 		Object[] output = new Object[contextProviders.length];
 		for (int i = 0; i < output.length; i++) {
 			Object obj = contextProviders[i].provide((Player) sender);
 			if (obj == null) {
 				String error = contextProviders[i].getErrorMessage();
-				if (error != null) {
-					sender.sendMessage(error);
-				} else {
-					showHelp(sender);
-				}
-				return null;
+				return Result.failure(this, error);
 			}
 			output[i] = obj;
 		}
-		return output;
+		return Result.success(this, output);
 	}
 	
-	private boolean assertAll(CommandSender sender) {
+	private Result<Boolean, String> assertAll(CommandSender sender) {
 		if (!(sender instanceof Player)) {
-			sender.sendMessage(CommandProcessUtils.msg("playerOnly"));
-			return false;
+			return Result.result(this, false, CommandProcessUtils.msg("playerOnly"));
 		}
 		for (ContextProvider<?> provider : asserters) {
 			Object o = provider.provide((Player) sender);
 			if (o == null) {
 				String error = provider.getErrorMessage();
-				if (error != null) {
-					sender.sendMessage(error);
-				} else {
-					showHelp(sender);
-				}
-				return false;
+				return Result.result(this, false, error);
 			}
 		}
-		return true;
+		return Result.result(this, true, null);
 	}
 	
 	/**
@@ -703,31 +691,33 @@ public class Command {
 		List<Result<Boolean, String>> results = new ArrayList<>();
 		if (methodHook != null || hasPostArgChild) {
 			Result<Boolean, String> result = runHook(sender, args, prepend, results);
-			if (result != null) {
-				return result;
-			}
-		}
-		if (args.length == 0) {
-			if (topLevel) {
-				showHelp(sender);
-				return Result.success(this, true);
-			}
-			return Result.result(this, false, results.stream().findFirst().map(Result::getMessage).orElse(null));
-		}
-		String[] truncArgs = Arrays.copyOfRange(args, 1, args.length);
-		for (Command command : children) {
-			if (command.isPostArg() || !command.nameMatches(args[0])) {
-				continue;
-			}
-			Result<Boolean, String> result = command.execute(sender, truncArgs, prepend);
 			if (result.getValue()) {
-				return Result.success(this, true);
+				return result;
 			}
 			results.add(result);
 		}
-		Result<Boolean, String> deepest = results.stream().max(Comparator.comparingInt(r -> r.getCommand().getDepth())).orElse(
-				Result.result(this, false, CommandProcessUtils.msg("invalidSubcommand").replace("%value%", args[0]))
-		);
+		if (args.length >= 1) {
+			String[] truncArgs = Arrays.copyOfRange(args, 1, args.length);
+			for (Command command : children) {
+				if (command.isPostArg() || !command.nameMatches(args[0])) {
+					continue;
+				}
+				Result<Boolean, String> result = command.execute(sender, truncArgs, prepend);
+				if (result.getValue()) {
+					return Result.success(this, true);
+				}
+				results.add(result);
+			}
+		}
+		Result<Boolean, String> deepest = null;
+		for (Result<Boolean, String> result : results) {
+			if (deepest == null || result.getCommand().getDepth() >= deepest.getCommand().getDepth()) {
+				deepest = result;
+			}
+		}
+		if (deepest == null) {
+			deepest = Result.result(this, false, CommandProcessUtils.msg("invalidSubcommand").replace("%value%", args[0]));
+		}
 		if (!topLevel) {
 			return deepest;
 		}
@@ -735,7 +725,7 @@ public class Command {
 			Arrays.stream(deepest.getMessage().split("\n")).forEach(sender::sendMessage);
 		}
 		deepest.getCommand().showHelp(sender);
-		return null;
+		return Result.result(this, true, null);
 	}
 	
 	protected Result<Boolean, String> runHook(CommandSender sender, String[] args, List<Object> prepend, List<Result<Boolean, String>> results) {
@@ -744,14 +734,12 @@ public class Command {
 				break;
 			case CONSOLE:
 				if (sender instanceof Player) {
-					sender.sendMessage(CommandProcessUtils.msg("consoleOnly"));
-					return Result.success(this, true);
+					return Result.result(this, false, CommandProcessUtils.msg("consoleOnly"));
 				}
 				break;
 			case PLAYER:
 				if (!(sender instanceof Player)) {
-					sender.sendMessage(CommandProcessUtils.msg("playerOnly"));
-					return Result.success(this, true);
+					return Result.result(this, false, CommandProcessUtils.msg("playerOnly"));
 				}
 				break;
 		}
@@ -766,18 +754,20 @@ public class Command {
 		Result<Object[], String> result = processArgs(toProcess, quoted, prepend, sender);
 		Object[] objArgs = result.getValue();
 		if (objArgs == null) {
-			results.add(Result.result(this, false, result.getMessage()));
-			return null;
+			return Result.result(this, false, result.getMessage());
 		}
-		if (asserters.length > 0 && !assertAll(sender)) {
-			return Result.success(this, true);
+		if (asserters.length > 0) {
+			Result<Boolean, String> assertionResult = assertAll(sender);
+			if (!assertionResult.getValue()) {
+				return Result.result(this, false, assertionResult.getMessage());
+			}
 		}
 		if (contextProviders.length > 0) {
-			Object[] context = getContext(sender);
-			if (context == null) {
-				return Result.success(this, true);
+			Result<Object[], String> contextResult = getContext(sender);
+			if (contextResult.getValue() == null) {
+				return Result.result(this, false, contextResult.getMessage());
 			}
-			objArgs = CommandProcessUtils.combine(objArgs, context);
+			objArgs = CommandProcessUtils.combine(objArgs, contextResult.getValue());
 		}
 		if (hasPostArgChild && split.getValue().length > this.args.length && !quoted[toProcess.length]) {
 			int spaces = (int) Arrays.stream(toProcess).filter(s -> s.contains(" ")).count();
@@ -800,7 +790,7 @@ public class Command {
 			}
 			int rangeSize = rangeEnd - rangeStart;
 			prepend.subList(prepend.size() - rangeSize, prepend.size()).clear();
-			return null;
+			return Result.result(this, false, null);
 		}
 		if (methodHook != null) {
 			try {
@@ -813,7 +803,7 @@ public class Command {
 			} catch (IllegalArgumentException e) {
 				StringJoiner joiner = new StringJoiner(", ", "[", "]");
 				for (Object o : objArgs) {
-					joiner.add(o.getClass().getName());
+					joiner.add(o == null ? "null" : o.getClass().getName());
 				}
 				Bukkit.getLogger().warning("Could not invoke method hook " + hook + " for plugin " + plugin + " with arguments of types:");
 				Bukkit.getLogger().warning(joiner.toString());
@@ -824,7 +814,7 @@ public class Command {
 				}
 			}
 		}
-		return null;
+		return Result.result(this, false, null);
 	}
 	
 	/**
