@@ -6,6 +6,13 @@ import java.util.function.Function;
 
 public class NumberConstraint {
 
+    /**
+     * Create a number constraint from a constraint string formatted like min,max or ,max or min,
+     * @param str The constraint string
+     * @param parse A function to parse a number of the given type from a string
+     * @param <T> The numeric type
+     * @return A constraint which can check the range of a number of the given type
+     */
     public static <T extends Number & Comparable<T>> Constraint<T> getConstraint(String str, Function<String, T> parse) {
         String[] split = str.split(",", 2);
         T min = split[0].length() == 0 ? null : parse.apply(split[0]);
