@@ -368,7 +368,7 @@ public class CommandParser {
 				defaultValue = c -> provider.provide((Player) c);
 				contextDefault = true;
 			} else {
-				defaultValue = c -> argType.convert(c, null, value.startsWith("\\") ? value.substring(1) : value, null);
+				defaultValue = c -> argType.convert(c, null, value.startsWith("\\") ? value.substring(1) : value);
 			}
 		}
 		if (name.endsWith("*?") || name.endsWith("?*")) {
@@ -387,7 +387,8 @@ public class CommandParser {
 		if (name.equals(argType.getName())) {
 			hideType = true;
 		}
-		CommandArgument carg = new CommandArgument(argType, argPos - 1, name, constraint, optional, hideType, consumes, vararg);
+		Constraint<?> realConstraint = constraint == null ? null : argType.getConstraint(constraint).setName(constraint);
+		CommandArgument carg = new CommandArgument(argType, argPos - 1, name, realConstraint, optional, hideType, consumes, vararg);
 		if (carg.isOptional() || name.startsWith("-")) {
 			carg.setDefaultValue(defaultValue, contextDefault);
 		}

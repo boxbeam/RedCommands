@@ -17,7 +17,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -76,30 +75,10 @@ public class CommandProcessUtils {
 	
 	public static List<ArgType<?>> getBaseArgTypes() {
 		List<ArgType<?>> types = new ArrayList<>();
-		types.add(new ArgType<>("int", (Function<String, Integer>) Integer::parseInt).constraint(msg("numberOutsideRange"), (c, v) -> {
-			String[] split = c.split(",");
-			int min = split[0].length() == 0 ? Integer.MIN_VALUE : Integer.parseInt(split[0]);
-			int max = split[1].length() == 0 ? Integer.MAX_VALUE : Integer.parseInt(split[1]);
-			return v >= min && v <= max;
-		}));
-		types.add(new ArgType<>("double", Double::parseDouble).constraint(msg("numberOutsideRange"), (c, v) -> {
-			String[] split = c.split(",");
-			double min = split[0].length() == 0 ? Double.MIN_VALUE : Double.parseDouble(split[0]);
-			double max = split[1].length() == 0 ? Double.MIN_VALUE : Double.parseDouble(split[1]);
-			return v >= min && v <= max;
-		}));
-		types.add(new ArgType<>("float", Float::parseFloat).constraint(msg("numberOutsideRange"), (c, v) -> {
-			String[] split = c.split(",");
-			float min = split[0].length() == 0 ? Float.MIN_VALUE : Float.parseFloat(split[0]);
-			float max = split[1].length() == 0 ? Float.MIN_VALUE : Float.parseFloat(split[1]);
-			return v >= min && v <= max;
-		}));
-		types.add(new ArgType<>("long", (Function<String, Long>) Long::parseLong).constraint(msg("numberOutsideRange"), (c, v) -> {
-			String[] split = c.split(",");
-			long min = split[0].length() == 0 ? Long.MIN_VALUE : Long.parseLong(split[0]);
-			long max = split[1].length() == 0 ? Long.MIN_VALUE : Long.parseLong(split[1]);
-			return v >= min && v <= max;
-		}));
+		types.add(new ArgType<>("int", (Function<String, Integer>) Integer::parseInt).constraint(s -> NumberConstraint.getConstraint(s, Integer::parseInt)));
+		types.add(new ArgType<>("double", Double::parseDouble).constraint(s -> NumberConstraint.getConstraint(s, Double::parseDouble)));
+		types.add(new ArgType<>("float", Float::parseFloat).constraint(s -> NumberConstraint.getConstraint(s, Float::parseFloat)));
+		types.add(new ArgType<>("long", (Function<String, Long>) Long::parseLong).constraint(s -> NumberConstraint.getConstraint(s, Long::parseLong)));
 		types.add(new ArgType<>("string", s -> s));
 		types.add(new ArgType<>("boolean", s -> {
 			switch (s.toLowerCase()) {
@@ -151,17 +130,14 @@ public class CommandProcessUtils {
 			prev = output[pos];
 		}
 		try {
-			Object obj = carg.getType().convert(sender, prev, arg, carg.getConstraint());
-			if (obj != null) {
+			Object obj = carg.getType().convert(sender, prev, arg);
+			if (obj != null && (carg.getConstraint() == null || carg.getConstraint().test(sender, obj))) {
 				return Result.success(command, obj);
 			}
 			String error = getConversionFailMessage(carg, arg);
-			if (carg.getType().getFailedConstraintMessage() == null) {
-				return Result.failure(command, error);
-			}
-			obj = carg.getType().convert(sender, prev, arg, null);
 			if (obj != null) {
-				return Result.failure(command, error + "\n" + carg.getType().getFailedConstraintMessage());
+				String err = carg.getConstraint().getError(sender, obj);
+				return Result.failure(command, error + (err == null ? "" : ("\n" + err)));
 			}
 			return Result.failure(command, error);
 		} catch (Exception e) {

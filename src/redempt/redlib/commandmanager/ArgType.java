@@ -1,16 +1,11 @@
 package redempt.redlib.commandmanager;
 
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
+import redempt.redlib.commandmanager.processing.CommandProcessUtils;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,13 +16,16 @@ import java.util.stream.Stream;
  * @param <T> The type this ArgType converts to
  */
 public class ArgType<T> {
-	
+
 	/**
-	 * The ArgType for a Player
+	 * Gets a default ArgType by name
+	 * @param name The name of the default ArgType
+	 * @return The ArgType, or null if there is not a default one by that name
 	 */
-	public static ArgType<Player> playerType = new ArgType<Player>("player", s -> Bukkit.getPlayerExact(s))
-			.tabStream(c -> Bukkit.getOnlinePlayers().stream().map(Player::getName));
-	
+	public static ArgType<?> getDefault(String name) {
+		return CommandProcessUtils.getBaseArgTypes().stream().filter(a -> a.getName().equals(name)).findFirst().orElse(null);
+	}
+
 	/**
 	 * Creates a ArgType for an enum, which will accept all of the enum's values as arguments and offer all enum values as tab completions
 	 * @param <T> The enum type
@@ -91,8 +89,7 @@ public class ArgType<T> {
 	private ArgType<?> parent;
 	private TabCompleter<?> tab = null;
 	private String name;
-	private ConstraintPredicate<T> constraint;
-	private String failedConstraintMessage;
+	private Function<String, Constraint<T>> constraint;
 	
 	protected ArgType(String name, ArgType<?> parent, ArgConverter<T, ?> convert) {
 		if (name.contains(" ")) {
@@ -117,10 +114,6 @@ public class ArgType<T> {
 	 */
 	public ArgType(String name, Function<String, T> convert) {
 		this(name, (c, s) -> convert.apply(s));
-	}
-	
-	public String getFailedConstraintMessage() {
-		return failedConstraintMessage;
 	}
 	
 	/**
@@ -150,45 +143,13 @@ public class ArgType<T> {
 	 * @param constraint A predicate to check constraints - return false to fail
 	 * @return itself
 	 */
-	public ArgType<T> constraint(ConstraintPredicate<T> constraint) {
-		return constraint(null, constraint);
-	}
-	
-	/**
-	 * Set the handler to check constraints for this type
-	 * @param constraint A predicate to check constraints - return false to fail
-	 * @return itself
-	 */
-	public ArgType<T> constraint(BiPredicate<String, T> constraint) {
-		return constraint(null, constraint);
-	}
-	
-	/**
-	 * Set the handler to check constraints for this type
-	 * @param failedConstraintMessage The message to be shown when the constraint fails
-	 * @param constraint A predicate to check constraints - return false to fail
-	 * @return itself
-	 */
-	public ArgType<T> constraint(String failedConstraintMessage, ConstraintPredicate<T> constraint) {
-		this.failedConstraintMessage = failedConstraintMessage;
+	public ArgType<T> constraint(Function<String, Constraint<T>> constraint) {
 		this.constraint = constraint;
 		return this;
 	}
 	
-	/**
-	 * Set the handler to check constraints for this type
-	 * @param failedConstraintMessage The message to be shown when the constraint fails
-	 * @param constraint A predicate to check constraints - return false to fail
-	 * @return itself
-	 */
-	public ArgType<T> constraint(String failedConstraintMessage, BiPredicate<String, T> constraint) {
-		this.failedConstraintMessage = failedConstraintMessage;
-		this.constraint = (c, s, v) -> constraint.test(s, v);
-		return this;
-	}
-	
-	public boolean checkConstraint(CommandSender sender, String constraint, T value) {
-		return constraint == null || this.constraint == null || value == null || this.constraint.test(sender, constraint, value);
+	public boolean checkConstraint(CommandSender sender, Constraint<T> constraint, T value) {
+		return constraint == null || this.constraint == null || value == null || constraint.test(sender, value);
 	}
 	
 	/**
@@ -260,14 +221,14 @@ public class ArgType<T> {
 	 * @param argument The argument to be converted
 	 * @return The converted argument for use in a method hook
 	 */
-	public T convert(CommandSender sender, Object previous, String argument, String constraint) {
-		T obj = convertCast(convert, sender, previous, argument);
-		if (!checkConstraint(sender, constraint, obj)) {
-			return null;
-		}
-		return obj;
+	public T convert(CommandSender sender, Object previous, String argument) {
+		return convertCast(convert, sender, previous, argument);
 	}
-	
+
+	public Constraint<T> getConstraint(String constraintContents) {
+		return constraint == null ? null : constraint.apply(constraintContents);
+	}
+
 	/**
 	 * Creates a new ArgType based on this one which converts from this type to another
 	 * @param <K> The type of the resulting ArgType
@@ -277,7 +238,7 @@ public class ArgType<T> {
 	 */
 	public <K> ArgType<K> map(String name, Function<T, K> func) {
 		return new ArgType<>(name, parent, (c, p, s) -> {
-			T obj = convert(c, p, s, null);
+			T obj = convert(c, p, s);
 			if (obj == null) {
 				return null;
 			}
@@ -294,7 +255,7 @@ public class ArgType<T> {
 	 */
 	public <K> ArgType<K> map(String name, BiFunction<CommandSender, T, K> func) {
 		return new ArgType<>(name, parent, (c, p, s) -> {
-			T obj = convert(c, p, s, null);
+			T obj = convert(c, p, s);
 			if (obj == null) {
 				return null;
 			}
@@ -343,12 +304,6 @@ public class ArgType<T> {
 	public static interface TabStreamCompleter<T> {
 		
 		public Stream<String> tabComplete(CommandSender sender, T prevArg, String[] prev);
-		
-	}
-	
-	public static interface ConstraintPredicate<T> {
-		
-		public boolean test(CommandSender sender, String constraint, T value);
 		
 	}
 	

@@ -2,6 +2,7 @@ package redempt.redlib.commandmanager.processing;
 
 import org.bukkit.command.CommandSender;
 import redempt.redlib.commandmanager.ArgType;
+import redempt.redlib.commandmanager.Constraint;
 
 import java.util.function.Function;
 
@@ -9,7 +10,7 @@ public class CommandArgument implements CommandParameter {
 	
 	private ArgType<?> type;
 	private String name;
-	private String constraint;
+	private Constraint<?> constraint;
 	private boolean optional;
 	private boolean hideType;
 	private boolean consume;
@@ -18,7 +19,7 @@ public class CommandArgument implements CommandParameter {
 	private Function<CommandSender, Object> defaultValue = null;
 	public int pos;
 	
-	public CommandArgument(ArgType<?> type, int pos, String name, String constraint, boolean optional, boolean hideType, boolean consume, boolean vararg) {
+	public CommandArgument(ArgType<?> type, int pos, String name, Constraint<?> constraint, boolean optional, boolean hideType, boolean consume, boolean vararg) {
 		this.name = name;
 		this.constraint = constraint;
 		this.type = type;
@@ -82,7 +83,7 @@ public class CommandArgument implements CommandParameter {
 		return vararg;
 	}
 	
-	public String getConstraint() {
+	public Constraint<?> getConstraint() {
 		return constraint;
 	}
 	
