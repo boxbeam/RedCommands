@@ -711,7 +711,7 @@ public class Command {
 		}
 		Result<Boolean, String> deepest = null;
 		for (Result<Boolean, String> result : results) {
-			if (deepest == null || result.getCommand().getDepth() >= deepest.getCommand().getDepth()) {
+			if (deepest == null || (result.getCommand().getDepth() >= deepest.getCommand().getDepth() && result.getMessage() != null)) {
 				deepest = result;
 			}
 		}
@@ -753,34 +753,27 @@ public class Command {
 		Boolean[] quoted = split.getMessage();
 		Result<Object[], String> result = processArgs(toProcess, quoted, prepend, sender);
 		Object[] objArgs = result.getValue();
-		if (objArgs == null) {
-			return Result.result(this, false, result.getMessage());
-		}
 		if (asserters.length > 0) {
 			Result<Boolean, String> assertionResult = assertAll(sender);
 			if (!assertionResult.getValue()) {
 				return Result.result(this, false, assertionResult.getMessage());
 			}
 		}
-		if (contextProviders.length > 0) {
-			Result<Object[], String> contextResult = getContext(sender);
-			if (contextResult.getValue() == null) {
-				return Result.result(this, false, contextResult.getMessage());
-			}
-			objArgs = CommandProcessUtils.combine(objArgs, contextResult.getValue());
-		}
 		if (hasPostArgChild && split.getValue().length > this.args.length && !quoted[toProcess.length]) {
 			int spaces = (int) Arrays.stream(toProcess).filter(s -> s.contains(" ")).count();
 			int start = this.args.length + spaces;
 			String[] truncArgs = Arrays.copyOfRange(args, start + 1, args.length);
-			int rangeStart = objArgs.length - (contextProviders.length + this.args.length + this.flags.length);
-			int rangeEnd = objArgs.length - contextProviders.length;
+			int rangeStart = objArgs == null ? 0 : objArgs.length - (this.args.length + this.flags.length);
+			int rangeEnd = objArgs == null ? 0 : objArgs.length;
 			for (int i = rangeStart; i < rangeEnd; i++) {
 				prepend.add(objArgs[i]);
 			}
 			for (Command command : children) {
 				if (!command.isPostArg() || !command.nameMatches(args[start])) {
 					continue;
+				}
+				if (objArgs == null) {
+					return Result.result(command, false, result.getMessage());
 				}
 				Result<Boolean, String> execResult = command.execute(sender, truncArgs, prepend);
 				if (execResult.getValue()) {
@@ -791,6 +784,16 @@ public class Command {
 			int rangeSize = rangeEnd - rangeStart;
 			prepend.subList(prepend.size() - rangeSize, prepend.size()).clear();
 			return Result.result(this, false, null);
+		}
+		if (objArgs == null) {
+			return Result.result(this, false, result.getMessage());
+		}
+		if (contextProviders.length > 0) {
+			Result<Object[], String> contextResult = getContext(sender);
+			if (contextResult.getValue() == null) {
+				return Result.result(this, false, contextResult.getMessage());
+			}
+			objArgs = CommandProcessUtils.combine(objArgs, contextResult.getValue());
 		}
 		if (methodHook != null) {
 			try {

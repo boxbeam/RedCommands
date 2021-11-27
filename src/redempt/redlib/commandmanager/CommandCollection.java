@@ -134,7 +134,7 @@ public class CommandCollection {
 				if (result.getValue()) {
 					return null;
 				}
-				if (message == null) {
+				if (message == null || message.getMessage() == null) {
 					message = result;
 				}
 			}
