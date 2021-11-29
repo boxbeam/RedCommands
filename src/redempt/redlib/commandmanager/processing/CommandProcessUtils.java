@@ -49,6 +49,16 @@ public class CommandProcessUtils {
 		}
 	}
 	
+	public static <T, U> Result<T, U> getDeepest(List<Result<T, U>> results) {
+		Result<T, U> deepest = null;
+		for (Result<T, U> result : results) {
+			if (deepest == null || (result.getCommand().getDepth() >= deepest.getCommand().getDepth() && result.getMessage() != null)) {
+				deepest = result;
+			}
+		}
+		return deepest;
+	}
+	
 	public static SimpleCommandMap getCommandMap() {
 		try {
 			Field field = Bukkit.getPluginManager().getClass().getDeclaredField("commandMap");

@@ -128,18 +128,19 @@ public class CommandCollection {
 		
 		@Override
 		public Result<Boolean, String> execute(CommandSender sender, String[] args, List<Object> prepend) {
-			Result<Boolean, String> message = null;
+			List<Result<Boolean, String>> results = new ArrayList<>();
 			for (Command cmd : children) {
 				Result<Boolean, String> result = cmd.execute(sender, args, prepend);
 				if (result.getValue()) {
 					return null;
 				}
-				if (message == null || message.getMessage() == null) {
-					message = result;
-				}
+				results.add(result);
 			}
+			Result<Boolean, String> message = CommandProcessUtils.getDeepest(results);
 			if (message != null) {
-				sender.sendMessage(message.getMessage());
+				if (message.getMessage() != null) {
+					sender.sendMessage(message.getMessage());
+				}
 				message.getCommand().showHelp(sender);
 				return null;
 			}

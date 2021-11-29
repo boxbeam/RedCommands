@@ -709,14 +709,9 @@ public class Command {
 				results.add(result);
 			}
 		}
-		Result<Boolean, String> deepest = null;
-		for (Result<Boolean, String> result : results) {
-			if (deepest == null || (result.getCommand().getDepth() >= deepest.getCommand().getDepth() && result.getMessage() != null)) {
-				deepest = result;
-			}
-		}
+		Result<Boolean, String> deepest = CommandProcessUtils.getDeepest(results);
 		if (deepest == null) {
-			deepest = Result.result(this, false, CommandProcessUtils.msg("invalidSubcommand").replace("%value%", args[0]));
+			deepest = Result.result(this, false, args.length == 0 ? null : CommandProcessUtils.msg("invalidSubcommand").replace("%value%", args[0]));
 		}
 		if (!topLevel) {
 			return deepest;
@@ -829,7 +824,7 @@ public class Command {
 		return Arrays.stream(names).anyMatch(s -> s.equals(name));
 	}
 	
-	private int getDepth() {
+	public int getDepth() {
 		int depth = 0;
 		Command c = this;
 		while (c.parent != null) {
