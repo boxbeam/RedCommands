@@ -1,34 +1,56 @@
 plugins {
-	id "java"
-	id "idea"
+	id 'java-library'
+	id 'idea'
+	id 'maven-publish'
 }
 targetCompatibility = 1.8
 sourceCompatibility = 1.8
 repositories {
 	mavenCentral()
 	maven {
-		url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/"
-		name = "spigot"
+		url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+		name = 'spigot'
 		content {
-			includeGroup "org.bukkit"
-			includeGroup "org.spigotmc"
+			includeGroup 'org.bukkit'
+			includeGroup 'org.spigotmc'
 		}
 	}
 	maven {
-		url = "https://oss.sonatype.org/content/repositories/snapshots"
+		url = 'https://oss.sonatype.org/content/repositories/snapshots'
 	}
 	mavenLocal()
 }
 dependencies {
-	compileOnly "org.spigotmc:spigot-api:1.17.1-R0.1-SNAPSHOT"
+	compileOnly 'org.spigotmc:spigot-api:1.17.1-R0.1-SNAPSHOT'
 }
 sourceSets {
 	main {
 		java {
-			srcDir "src"
+			srcDir 'src'
 		}
 		resources {
-			srcDir "res"
+			srcDir 'res'
+		}
+	}
+}
+task javadocJar(type: Jar) {
+	from javadoc
+	archiveClassifier.set('javadoc')
+}
+
+task sourcesJar(type: Jar) {
+	from sourceSets.main.allJava
+	archiveClassifier.set('sources')
+}
+publishing {
+	publications {
+		maven(MavenPublication) {
+			groupId = 'com.github.Redempt'
+			artifactId = rootProject.name
+			version = '1.0'
+			artifact jar
+			artifact javadocJar
+			artifact sourcesJar
 		}
 	}
 }
