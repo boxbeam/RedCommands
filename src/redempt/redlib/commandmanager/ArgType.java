@@ -27,11 +27,11 @@ public class ArgType<T> {
 	}
 
 	/**
-	 * Creates a ArgType for an enum, which will accept all of the enum's values as arguments and offer all enum values as tab completions
+	 * Creates an ArgType for an enum, which will accept all of the enum's values as arguments and offer all enum values as tab completions
 	 * @param <T> The enum type
 	 * @param name The name of the ArgType
-	 * @param clazz The enum class to make a ArgType from
-	 * @return A ArgType for the given enum
+	 * @param clazz The enum class to make an ArgType from
+	 * @return An ArgType for the given enum
 	 */
 	public static <T extends Enum> ArgType<T> of(String name, Class<T> clazz) {
 		if (!clazz.isEnum()) {
@@ -55,10 +55,10 @@ public class ArgType<T> {
 	}
 	
 	/**
-	 * Creates a ArgType for a set of possible string inputs
+	 * Creates an ArgType for a set of possible string inputs
 	 * @param name The name of the ArgType
 	 * @param values The list of possible inputs
-	 * @return A ArgType for the given inputs, which will offer tab completion and accept any of the supplied strings, or return null if the given argument does not match any of them
+	 * @return An ArgType for the given inputs, which will offer tab completion and accept any of the supplied strings, or return null if the given argument does not match any of them
 	 */
 	public static ArgType<String> of(String name, String... values) {
 		List<String> list = Arrays.stream(values).collect(Collectors.toList());
@@ -108,7 +108,7 @@ public class ArgType<T> {
 	}
 	
 	/**
-	 * Create a ArgType from a name and converter
+	 * Create an ArgType from a name and converter
 	 * @param name The name of this command argument type, to be used in the command file
 	 * @param convert The {@link Function} to convert from a String to whatever type this converts to
 	 */
@@ -117,7 +117,7 @@ public class ArgType<T> {
 	}
 	
 	/**
-	 * Create a ArgType from a name and converter
+	 * Create an ArgType from a name and converter
 	 * @param name The name of this command argument type, to be used in the command file
 	 * @param convert The {@link BiFunction} to convert from a String to whatever type this converts to
 	 */
