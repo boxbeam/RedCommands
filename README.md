@@ -9,7 +9,7 @@ Gradle:
 
 ```groovy
 repositories {
-        maven { url 'https://jitpack.io' }
+        maven { url 'redempt.dev' }
 }
 
 ```
@@ -20,14 +20,14 @@ dependencies {
 }
 ```
 
-Replace `Tag` with a release tag for RedLib. Example: `1.0`. You can also use `master` as the tag to get the latest version, though you will have to clear your gradle caches in order to update it.
+Replace `Tag` with a release tag for RedLib. Example: `1.5.3.1`. You can also use `master` as the tag to get the latest version, though you will have to clear your gradle caches in order to update it.
 
 Maven:
 
 ```xml
 <repository>
-        <id>jitpack.io</id>
-        <url>https://jitpack.io</url>
+        <id>redempt.dev</id>
+        <url>https://redempt.dev</url>
 </repository>
 ```
 
@@ -39,7 +39,7 @@ Maven:
         <scope>provided</scope>
 </dependency>
 ```
-Replace `Tag` with a release tag for RedLib. Example: `1.0`. You can also use `master` as the tag to get the latest version, though you will have to clear your maven caches in order to update it.
+Replace `Tag` with a release tag for RedLib. Example: `1.5.3.1`. You can also use `master` as the tag to get the latest version, though you will have to clear your maven caches in order to update it.
 
 # Usage
 
