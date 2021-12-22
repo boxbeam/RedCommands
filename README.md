@@ -9,7 +9,7 @@ Gradle:
 
 ```groovy
 repositories {
-        maven { url 'redempt.dev' }
+        maven { url 'https://redempt.dev' }
 }
 
 ```
