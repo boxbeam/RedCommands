@@ -676,7 +676,11 @@ public class Command {
 		if (arg.getType().getParent() != null) {
 			previous = getPrevious(args, pos - 1, argNum - 1, sender);
 		}
-		return prevArg.getType().convert(sender, previous, args[pos - 1]);
+		try {
+			return prevArg.getType().convert(sender, previous, args[pos - 1]);
+		} catch (Exception e) {
+			return null;
+		}
 	}
 	
 	protected Result<Boolean, String> execute(CommandSender sender, String[] args, List<Object> prepend) {
