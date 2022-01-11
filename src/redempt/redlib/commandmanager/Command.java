@@ -759,7 +759,7 @@ public class Command {
 			}
 		}
 		if (hasPostArgChild && split.getValue().length > this.args.length && !quoted[toProcess.length]) {
-			int spaces = (int) Arrays.stream(toProcess).filter(s -> s.contains(" ")).count();
+			int spaces = Arrays.stream(toProcess).mapToInt(s -> (int) s.chars().filter(c -> c == ' ').count()).sum();
 			int start = this.args.length + spaces;
 			String[] truncArgs = Arrays.copyOfRange(args, start + 1, args.length);
 			int rangeStart = objArgs == null ? 0 : objArgs.length - (this.args.length + this.flags.length);
