@@ -167,7 +167,7 @@ public class Command {
 		while (!stack.isEmpty()) {
 			builder.append(stack.pop()).append(' ');
 		}
-		while (builder.charAt(builder.length() - 1) == ' ') {
+		while (builder.length() > 0 && builder.charAt(builder.length() - 1) == ' ') {
 			builder.deleteCharAt(builder.length() - 1);
 		}
 		return "/" + builder;
