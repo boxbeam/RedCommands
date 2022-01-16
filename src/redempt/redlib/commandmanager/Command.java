@@ -437,7 +437,7 @@ public class Command {
 		if (plugin == null) {
 			plugin = CommandProcessUtils.getCallingPlugin();
 		}
-		RedCommand cmd = new RedCommand(plugin, names[0], help == null ? "None" : help, "", permission, Arrays.stream(names).skip(1).collect(Collectors.toList())) {
+		RedCommand cmd = new RedCommand(plugin, names[0], help == null ? "None" : help, getFullName().substring(1), permission, Arrays.stream(names).skip(1).collect(Collectors.toList())) {
 			
 			@Override
 			public boolean execute(CommandSender sender, String name, String[] args) {
@@ -759,7 +759,7 @@ public class Command {
 			}
 		}
 		if (hasPostArgChild && split.getValue().length > this.args.length && !quoted[toProcess.length]) {
-			int spaces = Arrays.stream(toProcess).mapToInt(s -> (int) s.chars().filter(c -> c == ' ').count()).sum();
+			int spaces = (int) Arrays.stream(toProcess).flatMap(s -> s.chars().boxed()).filter(c -> c == ' ').count();
 			int start = this.args.length + spaces;
 			String[] truncArgs = Arrays.copyOfRange(args, start + 1, args.length);
 			int rangeStart = objArgs == null ? 0 : objArgs.length - (this.args.length + this.flags.length);
