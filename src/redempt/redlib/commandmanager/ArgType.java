@@ -196,7 +196,14 @@ public class ArgType<T> {
 		return this;
 	}
 	
-	protected List<String> tabComplete(CommandSender sender, String[] args, Object prev) {
+	/**
+	 * Gets tab completions
+	 * @param sender The sender of the command
+	 * @param args The previous arguments
+	 * @param prev The previous value
+	 * @return The tab completions
+	 */
+	public List<String> tabComplete(CommandSender sender, String[] args, Object prev) {
 		if (tab == null || prev == null && parent != null) {
 			return new ArrayList<>();
 		}
