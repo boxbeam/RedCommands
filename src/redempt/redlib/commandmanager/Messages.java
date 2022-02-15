@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -28,14 +29,23 @@ import java.util.stream.Collectors;
 public class Messages {
 	
 	private static Map<Plugin, Messages> all = new HashMap<>();
+	private static Pattern placeholderPattern = Pattern.compile("%\\w+%");
+	
+	/**
+	 * @return The default pattern to match placeholders with
+	 */
+	public static Pattern getDefaultPlaceholderPattern() {
+		return placeholderPattern;
+	}
 	
 	/**
 	 * Loads messages from a file and writes missing defaults
 	 * @param defaults The InputStream for default messages. Use {@link Plugin#getResource(String)} for this.
 	 * @param path The path of the file in the plugin folder to load messages from
+	 * @param placeholderPattern The regex pattern to match placeholders
 	 * @return The Messages instance with messages loaded.
 	 */
-	public static Messages load(InputStream defaults, Path path) {
+	public static Messages load(InputStream defaults, Path path, Pattern placeholderPattern) {
 		try {
 			Map<String, String> messages = Files.exists(path) ? parse(Files.readAllLines(path)) : new LinkedHashMap<>();
 			BufferedReader reader = new BufferedReader(new InputStreamReader(defaults));
@@ -55,11 +65,41 @@ public class Messages {
 			if (missing[0]) {
 				write(messages, path);
 			}
-			return new Messages(null, messages, defaultMap);
+			Map<String, Message> messageMap = new HashMap<>();
+			for (String key : defaultMap.keySet()) {
+				messageMap.put(key, new Message(messages.get(key), defaultMap.get(key), placeholderPattern));
+			}
+			return new Messages(null, messageMap);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
+	/**
+	 * Loads messages from a file and writes missing defaults
+	 * @param defaults The InputStream for default messages. Use {@link Plugin#getResource(String)} for this.
+	 * @param path The path of the file in the plugin folder to load messages from
+	 * @return The Messages instance with messages loaded.
+	 */
+	public static Messages load(InputStream defaults, Path path) {
+		return load(defaults, path, placeholderPattern);
+	}
+	
+	/**
+	 * Loads messages from a file and writes missing defaults
+	 * @param plugin The plugin loading the messages
+	 * @param defaults The InputStream for default messages. Use {@link Plugin#getResource(String)} for this.
+	 * @param filename The name of the file in the plugin folder to load messages from
+	 * @param placeholderPattern The regex pattern to match placeholders
+	 * @return The Messages instance with messages loaded.
+	 */
+	public static Messages load(Plugin plugin, InputStream defaults, String filename, Pattern placeholderPattern) {
+		Path path = plugin.getDataFolder().toPath().resolve(filename);
+		Messages messages = load(defaults, path, placeholderPattern);
+		messages.plugin = plugin;
+		all.put(plugin, messages);
+		return messages;
 	}
 	
 	/**
@@ -70,11 +110,7 @@ public class Messages {
 	 * @return The Messages instance with messages loaded.
 	 */
 	public static Messages load(Plugin plugin, InputStream defaults, String filename) {
-		Path path = plugin.getDataFolder().toPath().resolve(filename);
-		Messages messages = load(defaults, path);
-		messages.plugin = plugin;
-		all.put(plugin, messages);
-		return messages;
+		return load(plugin, defaults, filename, placeholderPattern);
 	}
 	
 	/**
@@ -90,10 +126,31 @@ public class Messages {
 	 * Loads messages from a file, messages.txt, and writes missing defaults
 	 * @param plugin The plugin loading the messages
 	 * @param defaults The InputStream for default messages. Use {@link Plugin#getResource(String)} for this.
+	 * @param placeholderPattern The regex pattern to match placeholders
+	 * @return The Messages instance with messages loaded.
+	 */
+	public static Messages load(Plugin plugin, InputStream defaults, Pattern placeholderPattern) {
+		return load(plugin, defaults, "messages.txt", placeholderPattern);
+	}
+	
+	/**
+	 * Loads messages from a file, messages.txt, and writes missing defaults
+	 * @param plugin The plugin loading the messages
+	 * @param defaults The InputStream for default messages. Use {@link Plugin#getResource(String)} for this.
 	 * @return The Messages instance with messages loaded.
 	 */
 	public static Messages load(Plugin plugin, InputStream defaults) {
-		return load(plugin, defaults, "messages.txt");
+		return load(plugin, defaults, "messages.txt", placeholderPattern);
+	}
+	
+	/**
+	 * Loads messages from a file, messages.txt, and writes missing defaults loaded from the plugin resource called messages.txt
+	 * @param plugin The plugin loading the messages
+	 * @param placeholderPattern The regex pattern to match placeholders
+	 * @return The Messages instance with messages loaded.
+	 */
+	public static Messages load(Plugin plugin, Pattern placeholderPattern) {
+		return load(plugin, plugin.getResource("messages.txt"), "messages.txt", placeholderPattern);
 	}
 	
 	/**
@@ -102,13 +159,13 @@ public class Messages {
 	 * @return The Messages instance with messages loaded.
 	 */
 	public static Messages load(Plugin plugin) {
-		return load(plugin, plugin.getResource("messages.txt"), "messages.txt");
+		return load(plugin, plugin.getResource("messages.txt"), "messages.txt", placeholderPattern);
 	}
 	
 	/**
 	 * Determines which plugin is calling this method, finds its loaded messages, and returns the message with the given name.
 	 * @param message The name of the message
-	 * @return The message, which has been formatted with {@literal &} as the color character.
+	 * @return The message, which has been formatted according to the formatter of the Messages object
 	 * @throws IllegalStateException if your plugin has not loaded any messages
 	 */
 	public static String msg(String message) {
@@ -118,6 +175,22 @@ public class Messages {
 			throw new IllegalStateException("Your plugin has not loaded any messages, or this method is being called from the wrong plugin");
 		}
 		return msgs.get(message);
+	}
+	
+	/**
+	 * Determines which plugin is calling this method, finds its loaded messages, and returns the message with the given name, replacing placeholders
+	 * @param message The name of the message
+	 * @param placeholderValues Values for the placeholders in the message
+	 * @return The message, which has been formatted according to the formatter of the Messages object and has placeholders replaced
+	 * @throws IllegalStateException if your plugin has not loaded any messages
+	 */
+	public static String msgReplace(String message, String... placeholderValues) {
+		Plugin plugin = CommandProcessUtils.getCallingPlugin();
+		Messages msgs = all.get(plugin);
+		if (msgs == null) {
+			throw new IllegalStateException("Your plugin has not loaded any messages, or this method is being called from the wrong plugin");
+		}
+		return msgs.getAndReplace(message, placeholderValues);
 	}
 	
 	private static Map<String, String> parse(List<String> input) {
@@ -145,14 +218,19 @@ public class Messages {
 	}
 	
 	private Plugin plugin;
-	private Map<String, String> messages;
-	private Map<String, String> defaults;
+	private Map<String, Message> messages;
 	private UnaryOperator<String> formatter = FormatUtils::color;
 	
-	private Messages(Plugin plugin, Map<String, String> messages, Map<String, String> defaults) {
+	private Messages(Plugin plugin, Map<String, Message> messages) {
 		this.messages = messages;
-		this.defaults = defaults;
 		this.plugin = plugin;
+		applyFormat();
+	}
+	
+	private void applyFormat() {
+		messages.values().forEach(m -> {
+			m.setFormatted(formatter.apply(m.getValue()));
+		});
 	}
 	
 	/**
@@ -162,6 +240,7 @@ public class Messages {
 	 */
 	public Messages setFormatter(UnaryOperator<String> formatter) {
 		this.formatter = formatter;
+		applyFormat();
 		return this;
 	}
 	
@@ -173,16 +252,44 @@ public class Messages {
 	}
 	
 	/**
-	 * Gets a color-formatted message by name
+	 * Gets a formatted message by name
 	 * @param msg The name of the message
-	 * @return The message, which has been formatted with {@literal &} as the color character.
+	 * @return The message, which has been formatted according to the formatter function of this Messages
 	 */
 	public String get(String msg) {
-		String message = messages.getOrDefault(msg, defaults.get(msg));
+		Message message = messages.get(msg);
 		if (message == null) {
 			throw new IllegalArgumentException("Message '" + msg + "' does not have an assigned or default value!");
 		}
-		return formatter.apply(message);
+		return message.getFormattedValue();
+	}
+	
+	/**
+	 * Gets a formatted message by name, replacing placeholders in it
+	 * @param msg The name of the message
+	 * @param placeholderValues The values for the placeholders in the message, in the order they appear in the default value
+	 * @return The formatted message with its placeholders replaced
+	 */
+	public String getAndReplace(String msg, String... placeholderValues) {
+		Message message = getMessage(msg);
+		List<String> placeholders = message.getPlaceholders();
+		if (placeholderValues.length != placeholders.size()) {
+			throw new IllegalArgumentException("Expected exactly " + placeholders.size() + " placeholder values, got " + placeholderValues.length);
+		}
+		String val = message.getFormattedValue();
+		for (int i = 0; i < placeholders.size(); i++) {
+			val = val.replace(placeholders.get(i), placeholderValues[i]);
+		}
+		return val;
+	}
+	
+	/**
+	 * Gets the raw Message object by name
+	 * @param msg The name of the message object
+	 * @return The Message, or null
+	 */
+	public Message getMessage(String msg) {
+		return messages.get(msg);
 	}
 	
 }
