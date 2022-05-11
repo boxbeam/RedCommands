@@ -31,10 +31,12 @@ public class CommandFlag implements CommandParameter {
 		return defaultValue == null ? null : defaultValue.apply(sender);
 	}
 	
+	@Override
 	public int getPosition() {
 		return pos;
 	}
 	
+	@Override
 	public Constraint<?> getConstraint() {
 		return constraint;
 	}
@@ -44,6 +46,7 @@ public class CommandFlag implements CommandParameter {
 		return type.getName();
 	}
 	
+	@Override
 	public ArgType<?> getType() {
 		return type;
 	}
@@ -56,6 +59,7 @@ public class CommandFlag implements CommandParameter {
 		return Arrays.stream(names).anyMatch(name::equals);
 	}
 	
+	@Override
 	public String getName() {
 		return name;
 	}
