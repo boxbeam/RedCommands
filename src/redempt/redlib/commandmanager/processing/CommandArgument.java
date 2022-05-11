@@ -30,6 +30,7 @@ public class CommandArgument implements CommandParameter {
 		this.vararg = vararg;
 	}
 	
+	@Override
 	public String getName() {
 		return name;
 	}
@@ -51,6 +52,7 @@ public class CommandArgument implements CommandParameter {
 		return defaultValue;
 	}
 	
+	@Override
 	public int getPosition() {
 		return pos;
 	}
@@ -67,6 +69,7 @@ public class CommandArgument implements CommandParameter {
 		return typeName;
 	}
 	
+	@Override
 	public ArgType<?> getType() {
 		return type;
 	}
@@ -83,6 +86,7 @@ public class CommandArgument implements CommandParameter {
 		return vararg;
 	}
 	
+	@Override
 	public Constraint<?> getConstraint() {
 		return constraint;
 	}

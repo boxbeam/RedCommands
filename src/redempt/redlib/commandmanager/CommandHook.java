@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface CommandHook {
 	
-	public String value();
+	String value();
 	
 }
