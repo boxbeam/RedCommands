@@ -1,5 +1,5 @@
 # RedCommands
-A powerful command framework for Spigot plugins using a custom file format. Support for rdcml file format in Intellij: https://github.com/Shuaiouke/RedLib-Command-File
+A powerful command framework for Spigot plugins using a custom file format. Support for rdcml file format in Intellij: https://github.com/Ciel-MC/RedLib-Command-File
 
 Support Discord: https://discord.gg/agu5xGy2YZ
 
